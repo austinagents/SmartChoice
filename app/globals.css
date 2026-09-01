@@ -513,10 +513,10 @@ p {
 
 .footer-grid {
   display: grid;
-  gap: 48px;
-  grid-template-columns: 1.1fr 0.7fr 1fr;
+  column-gap: clamp(34px, 4vw, 58px);
+  grid-template-columns: minmax(360px, 44%) minmax(140px, 170px) minmax(180px, 220px);
   margin: 0 auto;
-  max-width: 1380px;
+  max-width: 1120px;
 }
 
 .footer-logo {
@@ -551,6 +551,23 @@ p {
 .footer-links {
   display: grid;
   gap: 12px;
+}
+
+.footer-links a,
+.footer-links span {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.98rem;
+  line-height: 1.35;
+}
+
+.footer-service-area .footer-links {
+  gap: 9px;
+}
+
+.footer-service-area .footer-links span {
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 0.94rem;
+  font-weight: 500;
 }
 
 @media (max-width: 1280px) {

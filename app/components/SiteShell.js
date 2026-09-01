@@ -67,6 +67,16 @@ export function Footer() {
             ))}
           </div>
         </div>
+        <div className="footer-service-area">
+          <h2>Service Area</h2>
+          <div className="footer-links">
+            <span>Greater Naples</span>
+            <span>Quail Creek</span>
+            <span>Quail Creek Estates</span>
+            <span>Esplanade</span>
+            <span>The Quarry</span>
+          </div>
+        </div>
       </div>
     </footer>
   );
