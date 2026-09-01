@@ -67,15 +67,6 @@ export function Footer() {
             ))}
           </div>
         </div>
-        <div>
-          <h2>Stay Updated</h2>
-          <p>Sign up with your email address to receive news and updates.</p>
-          <form className="signup">
-            <input aria-label="Email address" placeholder="Email Address" />
-            <button type="button">Sign Up</button>
-          </form>
-          <small>We respect your privacy.</small>
-        </div>
       </div>
     </footer>
   );

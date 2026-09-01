@@ -11,7 +11,7 @@ export default function Contact() {
           <div className="hero-overlay" />
           <div className="hero-content">
             <p className="eyebrow">Contact Smart Choice</p>
-            <h1>Call or Text Anytime — We’re Here to Help</h1>
+            <h1>Call or Text Anytime. We’re Here to Help</h1>
             <p className="hero-copy">
               Located right off Oakes Blvd. in North Naples.
             </p>

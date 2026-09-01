@@ -1,6 +1,6 @@
 import SiteShell from "../components/SiteShell";
 import LocalImage from "../components/LocalImage";
-import { images, phone, phoneHref } from "../data";
+import { images, phoneHref } from "../data";
 
 const steps = [
   "Let’s connect either in-person or remotely to discuss your wants and needs",
@@ -38,7 +38,7 @@ export default function BuiltToOrder() {
               more.
             </p>
             <a className="btn btn-primary" href={phoneHref}>
-              Contact Us
+              Start Your Build
             </a>
           </div>
         </section>
@@ -72,9 +72,6 @@ export default function BuiltToOrder() {
               <div key={upgrade}>{upgrade}</div>
             ))}
           </div>
-          <a className="btn btn-primary" href={phoneHref}>
-            {phone}
-          </a>
         </section>
       </main>
     </SiteShell>

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import SiteShell from "./components/SiteShell";
 import LocalImage from "./components/LocalImage";
-import { images, phone, phoneHref } from "./data";
+import { images, phoneHref } from "./data";
 
 const whatWeDo = [
   { title: "Pre-Owned Carts", text: "Ready-to-ride inventory", href: "/gallery" },
@@ -29,15 +29,12 @@ export default function Home() {
             <p className="eyebrow">Smart Choice Golf Carts</p>
             <h1>YOUR LOCAL ONE-STOP GOLF CART SHOP</h1>
             <p className="hero-copy">
-              Sales, service, custom builds and consignment — right here in the
+              Sales, service, custom builds and consignment, right here in the
               neighborhood.
             </p>
             <div className="button-row">
               <a className="btn btn-primary" href={phoneHref}>
-                Contact Us
-              </a>
-              <a className="btn btn-secondary dark" href={phoneHref}>
-                {phone}
+                Get Started
               </a>
             </div>
           </div>
@@ -67,7 +64,7 @@ export default function Home() {
             <p className="eyebrow">Mobile Services Available</p>
             <h2>Golf cart service brought right to your driveway.</h2>
             <p>
-              Battery replacements, annual services, repairs, and upgrades —
+              Battery replacements, annual services, repairs, and upgrades,
               done efficiently and professionally.
             </p>
             <p>
@@ -75,7 +72,7 @@ export default function Home() {
               Estates, Esplanade, and The Quarry.
             </p>
             <a className="btn btn-primary" href={phoneHref}>
-              Contact Us
+              Schedule Service
             </a>
           </div>
         </section>

@@ -1,6 +1,6 @@
 import SiteShell from "../components/SiteShell";
 import LocalImage from "../components/LocalImage";
-import { images, phone, phoneHref } from "../data";
+import { images, phoneHref } from "../data";
 
 const benefits = [
   "Photos + listing handled",
@@ -13,7 +13,7 @@ const steps = [
   "Send photos + basic details",
   "We pick it up or you drop it off",
   "We list it, show it, and handle buyers",
-  "You get paid — fast and hassle-free",
+  "You get paid, fast and hassle-free",
 ];
 
 export default function Information() {
@@ -31,13 +31,13 @@ export default function Information() {
           <div className="hero-overlay" />
           <div className="hero-content">
             <p className="eyebrow">Consignment Sales</p>
-            <h1>We’ll sell your cart for you — quickly and professionally.</h1>
+            <h1>We’ll sell your cart for you, quickly and professionally.</h1>
             <p className="hero-copy">
               If you’re ready to sell your cart but don’t want the hassle, we’ve
               got you covered.
             </p>
             <a className="btn btn-primary" href={phoneHref}>
-              Contact Us To List Your Cart
+              Sell Your Cart
             </a>
           </div>
         </section>
@@ -70,9 +70,6 @@ export default function Information() {
               </article>
             ))}
           </div>
-          <a className="btn btn-primary" href={phoneHref}>
-            {phone}
-          </a>
         </section>
       </main>
     </SiteShell>

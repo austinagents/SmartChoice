@@ -1,4 +1,4 @@
-export const phone = "239.789.8025";
+export const phone = "(239) 789-8025";
 export const phoneHref = "tel:12397898025";
 export const imageBase = "/smartchoice-current-site-images/";
 
