@@ -14,8 +14,8 @@ export function Header() {
         <LocalImage
           file="smart-choice.jpg"
           alt="Smart Choice Golf Carts"
-          height={42}
-          width={190}
+          height={50}
+          width={220}
         />
       </Link>
       <nav className="main-nav" aria-label="Main navigation">
