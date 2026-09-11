@@ -8,7 +8,7 @@ export function asset(file) {
 }
 
 export const images = {
-  logo: "smart-choice.jpg",
+  logo: "smarchoicenew.png",
   hero: "IMG_9827.jpg",
   homeFeature: "IMG_8738+(2)+copy.jpg",
   serviceHero: "IMG_0193.jpg",

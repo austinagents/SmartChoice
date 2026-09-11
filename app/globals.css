@@ -71,20 +71,17 @@ img {
 
 .brand {
   align-items: center;
-  background: white;
-  border-radius: 3px;
   display: flex;
-  height: 44px;
+  height: 52px;
   justify-content: center;
-  overflow: hidden;
-  width: 196px;
+  width: 156px;
 }
 
 .brand img {
-  height: 44px;
-  object-fit: cover;
+  height: auto;
+  object-fit: contain;
   object-position: center;
-  width: 196px;
+  width: 156px;
 }
 
 .main-nav {
@@ -1041,15 +1038,14 @@ p {
   }
 
   .brand {
-    height: 34px;
+    height: 44px;
     justify-self: start;
-    width: 150px;
+    width: 132px;
   }
 
   .brand img {
-    height: 34px;
-    object-fit: cover;
-    width: 150px;
+    height: auto;
+    width: 132px;
   }
 
   .phone-link {

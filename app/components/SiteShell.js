@@ -12,10 +12,10 @@ export function Header() {
     <header className="site-header">
       <Link href="/" className="brand" aria-label="Smart Choice Golf Carts home">
         <LocalImage
-          file="smart-choice.jpg"
+          file="smarchoicenew.png"
           alt="Smart Choice Golf Carts"
-          height={50}
-          width={220}
+          height={72}
+          width={217}
         />
       </Link>
       <nav className="main-nav" aria-label="Main navigation">
@@ -48,10 +48,10 @@ export function Footer() {
         <div className="footer-brand">
           <LocalImage
             className="footer-logo"
-            file="smart-choice.jpg"
+            file="smarchoicenew.png"
             alt="Smart Choice Golf Carts"
-            height={52}
-            width={230}
+            height={72}
+            width={217}
           />
           <p>Your local one-stop golf cart shop for sales, service, builds, and consignment.</p>
           <a className="footer-phone" href={phoneHref}>
