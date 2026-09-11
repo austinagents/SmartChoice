@@ -505,6 +505,93 @@ p {
   width: 100%;
 }
 
+.inventory-hero {
+  align-items: end;
+  background: var(--charcoal);
+  color: white;
+  display: grid;
+  gap: 32px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: clamp(82px, 10vw, 132px) clamp(22px, 6vw, 86px) clamp(52px, 7vw, 76px);
+}
+
+.inventory-hero h1 {
+  font-size: clamp(2.75rem, 5.5vw, 5rem);
+  max-width: 980px;
+}
+
+.inventory-hero p:not(.eyebrow) {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 1.18rem;
+  max-width: 700px;
+}
+
+.inventory-grid {
+  display: grid;
+  gap: 22px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0 auto;
+  max-width: 1480px;
+  padding: clamp(28px, 5vw, 70px) clamp(18px, 4vw, 54px) clamp(78px, 8vw, 118px);
+}
+
+.inventory-card {
+  background: white;
+  border: 1px solid var(--line);
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 100%;
+}
+
+.inventory-photo {
+  aspect-ratio: 4 / 3;
+  background: var(--wash);
+  overflow: hidden;
+  position: relative;
+}
+
+.inventory-photo img {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.inventory-card-copy {
+  display: grid;
+  gap: 18px;
+  padding: 26px;
+}
+
+.inventory-card h2 {
+  font-size: 1.35rem;
+  line-height: 1.12;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.inventory-card p {
+  margin: 0;
+}
+
+.inventory-price {
+  color: var(--green);
+  font-size: 1.65rem;
+  font-weight: 950;
+  line-height: 1;
+  margin-bottom: 12px;
+}
+
+.inventory-link {
+  align-self: end;
+  border-top: 1px solid var(--line);
+  color: var(--charcoal);
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  padding-top: 18px;
+  text-transform: uppercase;
+}
+
 .site-footer {
   background: var(--charcoal);
   color: white;
@@ -583,7 +670,8 @@ p {
   }
 
   .service-grid,
-  .gallery-grid {
+  .gallery-grid,
+  .inventory-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -591,7 +679,8 @@ p {
   .service-layout,
   .two-column,
   .local-band,
-  .footer-grid {
+  .footer-grid,
+  .inventory-hero {
     grid-template-columns: 1fr;
   }
 }
@@ -652,8 +741,13 @@ p {
   .check-grid,
   .step-grid,
   .upgrade-grid,
-  .gallery-grid {
+  .gallery-grid,
+  .inventory-grid {
     grid-template-columns: 1fr;
+  }
+
+  .inventory-hero .btn {
+    width: 100%;
   }
 
   .gallery-grid figure.wide {

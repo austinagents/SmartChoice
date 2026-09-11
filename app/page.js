@@ -4,7 +4,11 @@ import LocalImage from "./components/LocalImage";
 import { images, phoneHref } from "./data";
 
 const whatWeDo = [
-  { title: "Pre-Owned Carts", text: "Ready-to-ride inventory", href: "/gallery" },
+  {
+    title: "Pre-Owned Carts",
+    text: "Ready-to-ride inventory",
+    href: "/pre-owned-inventory",
+  },
   {
     title: "Built-to-Order Carts",
     text: "Designed for your lifestyle",
@@ -15,7 +19,7 @@ const whatWeDo = [
     text: "Batteries, upgrades & maintenance",
     href: "/services",
   },
-  { title: "Consign Sales", text: "We sell your cart for you", href: "/information" },
+  { title: "Consign Sales", text: "We sell your cart for you", href: "/consignment" },
 ];
 
 export default function Home() {
