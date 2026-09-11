@@ -283,8 +283,10 @@ p {
 .feature-card {
   background: white;
   border: 1px solid var(--line);
+  display: grid;
+  grid-template-rows: auto 1fr;
   min-height: 230px;
-  padding: 30px;
+  overflow: hidden;
   transition:
     border-color 180ms ease,
     transform 180ms ease;
@@ -301,6 +303,23 @@ p {
   height: 3px;
   margin-bottom: 28px;
   width: 44px;
+}
+
+.feature-card-image {
+  aspect-ratio: 4 / 3;
+  background: var(--wash);
+  overflow: hidden;
+  position: relative;
+}
+
+.feature-card-image img {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.feature-card-copy {
+  padding: 30px;
 }
 
 .split-section {

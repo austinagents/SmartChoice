@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import SiteShell from "./components/SiteShell";
 import LocalImage from "./components/LocalImage";
@@ -8,18 +9,26 @@ const whatWeDo = [
     title: "Pre-Owned Carts",
     text: "Ready-to-ride inventory",
     href: "/pre-owned-inventory",
+    image: "/home-card-images/pre-owned-carts.webp",
   },
   {
     title: "Built-to-Order Carts",
     text: "Designed for your lifestyle",
     href: "/built-to-order",
+    image: "/home-card-images/built-to-order-carts.webp",
   },
   {
     title: "Service & Repairs",
     text: "Batteries, upgrades & maintenance",
     href: "/services",
+    image: "/home-card-images/service-repairs.webp",
   },
-  { title: "Consign Sales", text: "We sell your cart for you", href: "/consignment" },
+  {
+    title: "Consign Sales",
+    text: "We sell your cart for you",
+    href: "/consignment",
+    image: "/home-card-images/consign-sales.webp",
+  },
 ];
 
 export default function Home() {
@@ -52,9 +61,19 @@ export default function Home() {
           <div className="service-grid">
             {whatWeDo.map((item) => (
               <Link href={item.href} className="feature-card" key={item.title}>
-                <span />
-                <h3>{item.title}</h3>
-                <p>{item.text}</p>
+                <div className="feature-card-image">
+                  <Image
+                    src={item.image}
+                    alt=""
+                    fill
+                    sizes="(max-width: 720px) 100vw, (max-width: 1280px) 50vw, 25vw"
+                  />
+                </div>
+                <div className="feature-card-copy">
+                  <span />
+                  <h3>{item.title}</h3>
+                  <p>{item.text}</p>
+                </div>
               </Link>
             ))}
           </div>
