@@ -43,8 +43,9 @@ export function Header() {
 export function Footer() {
   return (
     <footer className="site-footer">
+      <div className="footer-rule" />
       <div className="footer-grid">
-        <div>
+        <div className="footer-brand">
           <LocalImage
             className="footer-logo"
             file="smart-choice.jpg"
@@ -52,12 +53,12 @@ export function Footer() {
             height={52}
             width={230}
           />
-          <p>YOUR LOCAL ONE-STOP GOLF CART SHOP</p>
+          <p>Your local one-stop golf cart shop for sales, service, builds, and consignment.</p>
           <a className="footer-phone" href={phoneHref}>
             {phone}
           </a>
         </div>
-        <div>
+        <div className="footer-column">
           <h2>Site Map</h2>
           <div className="footer-links">
             {navItems.slice(1).map((item) => (
@@ -67,7 +68,7 @@ export function Footer() {
             ))}
           </div>
         </div>
-        <div className="footer-service-area">
+        <div className="footer-column footer-service-area">
           <h2>Service Area</h2>
           <div className="footer-links">
             <span>Greater Naples</span>
