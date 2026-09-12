@@ -1,44 +1,62 @@
 import Image from "next/image";
 import Link from "next/link";
 import SiteShell from "./components/SiteShell";
-import LocalImage from "./components/LocalImage";
-import { images, inventoryImageBase, inventoryItems, phone, phoneHref } from "./data";
+import {
+  homepageImageSlots,
+  inventoryImageSlots,
+  inventoryItems,
+  phone,
+  phoneHref,
+} from "./data";
+import { getHomepageImageMap, getInventoryImageMap } from "./lib/siteImages";
+
+export const dynamic = "force-dynamic";
 
 const whatWeDo = [
   {
     title: "Pre-Owned Carts",
     text: "Ready-to-ride inventory",
     href: "/pre-owned-inventory",
-    image: "/home-card-images/pre-owned-carts.webp",
+    slotKey: "pre_owned_carts",
   },
   {
     title: "Built-to-Order Carts",
     text: "Designed for your lifestyle",
     href: "/built-to-order",
-    image: "/home-card-images/built-to-order-carts.webp",
+    slotKey: "built_to_order_carts",
   },
   {
     title: "Service & Repairs",
     text: "Batteries, upgrades & maintenance",
     href: "/services",
-    image: "/home-card-images/service-repairs.webp",
+    slotKey: "service_repairs",
   },
   {
     title: "Consign Sales",
     text: "We sell your cart for you",
     href: "/consignment",
-    image: "/home-card-images/consign-sales.webp",
+    slotKey: "consign_sales",
   },
 ];
 
 const featuredInventory = inventoryItems.slice(0, 4);
 
-export default function Home() {
+export default async function Home() {
+  const homepageImages = await getHomepageImageMap(homepageImageSlots);
+  const inventoryImages = await getInventoryImageMap(inventoryImageSlots);
+
   return (
     <SiteShell>
       <main className="home-page">
         <section className="hero hero-home">
-          <LocalImage file={images.hero} alt="" fill priority sizes="100vw" />
+          <Image
+            unoptimized
+            src={homepageImages.hero_image.src}
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+          />
           <div className="hero-overlay" />
           <div className="hero-content">
             <p className="eyebrow">Smart Choice Golf Carts</p>
@@ -71,7 +89,8 @@ export default function Home() {
               <Link href={item.href} className="department-card" key={item.title}>
                 <div className="department-card-image">
                   <Image
-                    src={item.image}
+                    unoptimized
+                    src={homepageImages[item.slotKey].src}
                     alt=""
                     fill
                     sizes="(max-width: 720px) 100vw, (max-width: 1280px) 50vw, 25vw"
@@ -98,10 +117,11 @@ export default function Home() {
           </div>
           <div className="featured-inventory-grid">
             {featuredInventory.map((cart, index) => (
-              <article className="featured-cart" key={`${cart.title}-${cart.price}`}>
+              <article className="featured-cart" key={cart.id}>
                 <div className="featured-cart-image">
                   <Image
-                    src={`${inventoryImageBase}${cart.image}`}
+                    unoptimized
+                    src={inventoryImages[cart.id][0].src}
                     alt={cart.title}
                     fill
                     priority={index === 0}
@@ -121,7 +141,13 @@ export default function Home() {
 
         <section className="home-feature-band">
           <div className="home-feature-image">
-            <LocalImage file={images.buildHero} alt="" fill sizes="(max-width: 980px) 100vw, 50vw" />
+            <Image
+              unoptimized
+              src={homepageImages.built_to_order_feature.src}
+              alt=""
+              fill
+              sizes="(max-width: 980px) 100vw, 50vw"
+            />
           </div>
           <div className="home-feature-copy">
             <p className="eyebrow">Built-to-Order</p>
@@ -139,7 +165,13 @@ export default function Home() {
 
         <section className="home-feature-band reverse">
           <div className="home-feature-image service-crop">
-            <LocalImage file={images.homeFeature} alt="" fill sizes="(max-width: 980px) 100vw, 50vw" />
+            <Image
+              unoptimized
+              src={homepageImages.mobile_service_feature.src}
+              alt=""
+              fill
+              sizes="(max-width: 980px) 100vw, 50vw"
+            />
           </div>
           <div className="home-feature-copy">
             <p className="eyebrow">Mobile Service</p>
@@ -156,7 +188,13 @@ export default function Home() {
 
         <section className="section home-section consignment-panel">
           <div className="consignment-image">
-            <LocalImage file={images.consignmentHero} alt="" fill sizes="(max-width: 980px) 100vw, 44vw" />
+            <Image
+              unoptimized
+              src={homepageImages.consignment_feature.src}
+              alt=""
+              fill
+              sizes="(max-width: 980px) 100vw, 44vw"
+            />
           </div>
           <div className="consignment-copy">
             <p className="eyebrow">Consignment Sales</p>

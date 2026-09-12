@@ -1,6 +1,9 @@
 import Image from "next/image";
 import SiteShell from "../components/SiteShell";
-import { inventoryImageBase, inventoryItems, phone, phoneHref } from "../data";
+import { inventoryImageSlots, inventoryItems, phone, phoneHref } from "../data";
+import { getInventoryImageMap } from "../lib/siteImages";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Pre-Owned Golf Cart Inventory | Smart Choice Golf Carts",
@@ -8,7 +11,9 @@ export const metadata = {
     "Browse available pre-owned golf carts from Smart Choice Golf Carts in Naples and call or text for current availability.",
 };
 
-export default function PreOwnedInventory() {
+export default async function PreOwnedInventory() {
+  const inventoryImages = await getInventoryImageMap(inventoryImageSlots);
+
   return (
     <SiteShell>
       <main>
@@ -28,10 +33,11 @@ export default function PreOwnedInventory() {
 
         <section className="inventory-grid" aria-label="Available pre-owned carts">
           {inventoryItems.map((item, index) => (
-            <article className="inventory-card" key={`${item.title}-${item.price}`}>
+            <article className="inventory-card" key={item.id}>
               <div className="inventory-photo">
                 <Image
-                  src={`${inventoryImageBase}${item.image}`}
+                  unoptimized
+                  src={inventoryImages[item.id][0].src}
                   alt={item.title}
                   fill
                   priority={index < 2}

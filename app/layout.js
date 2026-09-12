@@ -15,6 +15,9 @@ export const metadata = {
   title: "Smart Choice Golf Carts",
   description:
     "Your local one-stop golf cart shop for sales, service, custom builds, and consignment in Naples.",
+  icons: {
+    icon: "/smartchoice-current-site-images/smarchoicenew.png",
+  },
 };
 
 export default function RootLayout({ children }) {
