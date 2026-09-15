@@ -1,50 +1,53 @@
 import SiteShell from "../components/SiteShell";
 import LocalImage from "../components/LocalImage";
-import { images, phoneHref, serviceItems } from "../data";
+import { footerContentSlots, images, phoneHref, servicesContentSlots } from "../data";
+import { contentValue, footerContentValues, getContentMap } from "../lib/siteContent";
 
-const steps = [
-  ["Contact Us.", "Call or text."],
-  ["We Diagnose & Quote", "Clear recommendations."],
-  ["We Fix It Fast", "Done right the first time."],
-];
+export const dynamic = "force-dynamic";
 
-const reasons = [
-  ["Local & responsive", "We’re nearby and easy to reach. Call or text anytime."],
-  ["Honest recommendations", "Clear options, no pressure, and straightforward pricing."],
-  ["Quality work, done fast", "Most services completed same-day whenever possible."],
-];
+export default async function Services() {
+  const content = await getContentMap([
+    ...servicesContentSlots,
+    ...footerContentSlots,
+  ]);
+  const c = (sectionKey, contentKey) =>
+    contentValue(content, "services", sectionKey, contentKey);
+  const serviceItems = Array.from({ length: 7 }, (_item, index) =>
+    c("service_items", `item_${index + 1}`)
+  );
+  const steps = Array.from({ length: 3 }, (_item, index) => [
+    c("steps", `step_${index + 1}_title`),
+    c("steps", `step_${index + 1}_text`),
+  ]);
+  const reasons = Array.from({ length: 3 }, (_item, index) => [
+    c("reasons", `reason_${index + 1}_title`),
+    c("reasons", `reason_${index + 1}_text`),
+  ]);
 
-export default function Services() {
   return (
-    <SiteShell>
+    <SiteShell footerContent={footerContentValues(content)}>
       <main>
         <section className="hero page-hero">
           <LocalImage file={images.serviceHero} alt="" fill priority sizes="100vw" />
           <div className="hero-overlay" />
           <div className="hero-content">
-            <p className="eyebrow">Service</p>
-            <h1>Mobile Golf Cart Service, Right to Your Driveway</h1>
-            <p className="hero-copy">
-              From battery replacements and tune-ups to repairs and upgrades,
-              we make owning a golf cart easy.
-            </p>
-            <p className="hero-note">
-              Fast response times, honest pricing, and professional work you
-              can trust.
-            </p>
+            <p className="eyebrow">{c("hero", "eyebrow")}</p>
+            <h1>{c("hero", "heading")}</h1>
+            <p className="hero-copy">{c("hero", "copy")}</p>
+            <p className="hero-note">{c("hero", "note")}</p>
             <a className="btn btn-primary" href={phoneHref}>
-              Schedule Service
+              {c("hero", "button")}
             </a>
           </div>
         </section>
 
         <section className="section service-layout">
           <div>
-            <p className="eyebrow">What We Service</p>
-            <h2>Fast, reliable golf cart service, done right the first time.</h2>
+            <p className="eyebrow">{c("what_we_service", "eyebrow")}</p>
+            <h2>{c("what_we_service", "heading")}</h2>
             <div className="check-grid">
-              {serviceItems.map((item) => (
-                <div className="check-item" key={item}>
+              {serviceItems.map((item, index) => (
+                <div className="check-item" key={`service-item-${index + 1}`}>
                   <span>✓</span>
                   {item}
                 </div>
@@ -58,12 +61,12 @@ export default function Services() {
 
         <section className="section charcoal">
           <div className="section-heading">
-            <p className="eyebrow">How It Works</p>
-            <h2>Simple service from first call to final repair.</h2>
+            <p className="eyebrow">{c("how_it_works", "eyebrow")}</p>
+            <h2>{c("how_it_works", "heading")}</h2>
           </div>
           <div className="step-grid">
             {steps.map(([title, text], index) => (
-              <div className="step-card" key={title}>
+              <div className="step-card" key={`step-${index + 1}`}>
                 <span>{String(index + 1).padStart(2, "0")}</span>
                 <h3>{title}</h3>
                 <p>{text}</p>
@@ -74,12 +77,12 @@ export default function Services() {
 
         <section className="section">
           <div className="section-heading">
-            <p className="eyebrow">Why Smart Choice</p>
-            <h2>Local service you can trust, done right the first time.</h2>
+            <p className="eyebrow">{c("why_smart_choice", "eyebrow")}</p>
+            <h2>{c("why_smart_choice", "heading")}</h2>
           </div>
           <div className="service-grid">
-            {reasons.map(([title, text]) => (
-              <article className="feature-card" key={title}>
+            {reasons.map(([title, text], index) => (
+              <article className="feature-card" key={`reason-${index + 1}`}>
                 <span />
                 <h3>{title}</h3>
                 <p>{text}</p>

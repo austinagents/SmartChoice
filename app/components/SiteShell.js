@@ -40,7 +40,15 @@ export function Header() {
   );
 }
 
-export function Footer() {
+export function Footer({ content = {} }) {
+  const serviceAreas = (
+    content.serviceAreaText ||
+    "Greater Naples\nQuail Creek\nQuail Creek Estates\nEsplanade\nThe Quarry"
+  )
+    .split("\n")
+    .map((area) => area.trim())
+    .filter(Boolean);
+
   return (
     <footer className="site-footer">
       <div className="footer-rule" />
@@ -53,13 +61,16 @@ export function Footer() {
             height={72}
             width={217}
           />
-          <p>Your local one-stop golf cart shop for sales, service, builds, and consignment.</p>
+          <p>
+            {content.tagline ||
+              "Your local one-stop golf cart shop for sales, service, builds, and consignment."}
+          </p>
           <a className="footer-phone" href={phoneHref}>
             {phone}
           </a>
         </div>
         <div className="footer-column">
-          <h2>Site Map</h2>
+          <h2>{content.siteMapHeading || "Site Map"}</h2>
           <div className="footer-links">
             {navItems.slice(1).map((item) => (
               <Link key={item.href} href={item.href}>
@@ -69,13 +80,11 @@ export function Footer() {
           </div>
         </div>
         <div className="footer-column footer-service-area">
-          <h2>Service Area</h2>
+          <h2>{content.serviceAreaHeading || "Service Area"}</h2>
           <div className="footer-links">
-            <span>Greater Naples</span>
-            <span>Quail Creek</span>
-            <span>Quail Creek Estates</span>
-            <span>Esplanade</span>
-            <span>The Quarry</span>
+            {serviceAreas.map((area, index) => (
+              <span key={`${area}-${index}`}>{area}</span>
+            ))}
           </div>
         </div>
       </div>
@@ -83,12 +92,12 @@ export function Footer() {
   );
 }
 
-export default function SiteShell({ children }) {
+export default function SiteShell({ children, footerContent }) {
   return (
     <>
       <Header />
       {children}
-      <Footer />
+      <Footer content={footerContent} />
     </>
   );
 }

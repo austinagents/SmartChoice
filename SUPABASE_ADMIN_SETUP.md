@@ -1,12 +1,12 @@
 # Smart Choice Supabase Admin Setup
 
-This site uses Supabase for image changes on `/admin`.
+This site uses Supabase for image and text changes on `/admin`.
 
 The current Image Admin is intentionally unauthenticated in the app with
 `localAdminBypass = true`, so the browser uses the public anon key for image
-management. The `site_images` table and `site-images` Storage bucket policies
-must allow anon reads and writes for the admin to upload, replace, reorder, and
-delete images.
+management. The `site_images` table, `site_content` table, and `site-images`
+Storage bucket policies must allow anon reads and writes for the admin to
+upload, replace, reorder, and delete images plus save visible site text.
 
 ## Required Environment Variables
 
@@ -26,6 +26,7 @@ Use this only for the one-time local seed script. Do not add it as `NEXT_PUBLIC_
 1. Open Supabase Dashboard for the `smartchoice` project.
 2. Go to SQL Editor.
 3. Paste and run `supabase/001_site_images.sql`.
+4. Paste and run `supabase/003_site_content.sql`.
 
 ### Existing Supabase Project
 
@@ -36,6 +37,9 @@ policies for only:
 
 - `public.site_images`
 - Storage objects in the `site-images` bucket
+
+Then paste and run `supabase/003_site_content.sql` to add the text/content
+override table and anon content-editing policies.
 
 ## One-Time Image Seed
 

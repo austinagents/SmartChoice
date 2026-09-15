@@ -3,50 +3,62 @@ import Link from "next/link";
 import SiteShell from "./components/SiteShell";
 import {
   homepageImageSlots,
+  homepageContentSlots,
+  footerContentSlots,
   inventoryImageSlots,
+  inventoryContentSlots,
   inventoryItems,
   phone,
   phoneHref,
 } from "./data";
 import { getHomepageImageMap, getInventoryImageMap } from "./lib/siteImages";
+import { contentValue, footerContentValues, getContentMap } from "./lib/siteContent";
 
 export const dynamic = "force-dynamic";
-
-const whatWeDo = [
-  {
-    title: "Pre-Owned Carts",
-    text: "Ready-to-ride inventory",
-    href: "/pre-owned-inventory",
-    slotKey: "pre_owned_carts",
-  },
-  {
-    title: "Built-to-Order Carts",
-    text: "Designed for your lifestyle",
-    href: "/built-to-order",
-    slotKey: "built_to_order_carts",
-  },
-  {
-    title: "Service & Repairs",
-    text: "Batteries, upgrades & maintenance",
-    href: "/services",
-    slotKey: "service_repairs",
-  },
-  {
-    title: "Consign Sales",
-    text: "We sell your cart for you",
-    href: "/consignment",
-    slotKey: "consign_sales",
-  },
-];
 
 const featuredInventory = inventoryItems.slice(0, 4);
 
 export default async function Home() {
   const homepageImages = await getHomepageImageMap(homepageImageSlots);
   const inventoryImages = await getInventoryImageMap(inventoryImageSlots);
+  const content = await getContentMap([
+    ...homepageContentSlots,
+    ...inventoryContentSlots,
+    ...footerContentSlots,
+  ]);
+  const c = (sectionKey, contentKey, itemId = "") =>
+    contentValue(content, "homepage", sectionKey, contentKey, itemId);
+  const inventoryText = (contentKey, itemId = "") =>
+    contentValue(content, "pre-owned-inventory", "inventory", contentKey, itemId);
+  const whatWeDo = [
+    {
+      title: c("what_we_do", "pre_owned_title"),
+      text: c("what_we_do", "pre_owned_text"),
+      href: "/pre-owned-inventory",
+      slotKey: "pre_owned_carts",
+    },
+    {
+      title: c("what_we_do", "built_title"),
+      text: c("what_we_do", "built_text"),
+      href: "/built-to-order",
+      slotKey: "built_to_order_carts",
+    },
+    {
+      title: c("what_we_do", "service_title"),
+      text: c("what_we_do", "service_text"),
+      href: "/services",
+      slotKey: "service_repairs",
+    },
+    {
+      title: c("what_we_do", "consign_title"),
+      text: c("what_we_do", "consign_text"),
+      href: "/consignment",
+      slotKey: "consign_sales",
+    },
+  ];
 
   return (
-    <SiteShell>
+    <SiteShell footerContent={footerContentValues(content)}>
       <main className="home-page">
         <section className="hero hero-home">
           <Image
@@ -59,21 +71,18 @@ export default async function Home() {
           />
           <div className="hero-overlay" />
           <div className="hero-content">
-            <p className="eyebrow">Smart Choice Golf Carts</p>
-            <h1>Naples golf carts, built and serviced with care.</h1>
-            <p className="hero-copy">
-              Sales, service, custom builds, and consignment for the communities
-              we serve every day.
-            </p>
+            <p className="eyebrow">{c("hero", "eyebrow")}</p>
+            <h1>{c("hero", "heading")}</h1>
+            <p className="hero-copy">{c("hero", "copy")}</p>
             <div className="button-row">
               <Link className="btn btn-primary" href="/pre-owned-inventory">
-                View Inventory
+                {c("hero", "inventory_button")}
               </Link>
               <Link className="btn btn-secondary dark" href="/built-to-order">
-                Build Your Cart
+                {c("hero", "build_button")}
               </Link>
               <Link className="btn btn-tertiary" href="/services">
-                Schedule Service
+                {c("hero", "service_button")}
               </Link>
             </div>
           </div>
@@ -81,8 +90,8 @@ export default async function Home() {
 
         <section className="section home-section home-departments">
           <div className="section-heading">
-            <p className="eyebrow">What We Do</p>
-            <h2>Sales, service, custom builds, and consignment.</h2>
+            <p className="eyebrow">{c("what_we_do", "eyebrow")}</p>
+            <h2>{c("what_we_do", "heading")}</h2>
           </div>
           <div className="department-grid">
             {whatWeDo.map((item) => (
@@ -108,11 +117,11 @@ export default async function Home() {
         <section className="section home-section inventory-preview">
           <div className="section-heading split-heading">
             <div>
-              <p className="eyebrow">Available Now</p>
-              <h2>Featured pre-owned carts.</h2>
+              <p className="eyebrow">{c("inventory_preview", "eyebrow")}</p>
+              <h2>{c("inventory_preview", "heading")}</h2>
             </div>
             <Link className="btn btn-secondary dark" href="/pre-owned-inventory">
-              View All Inventory
+              {c("inventory_preview", "button")}
             </Link>
           </div>
           <div className="featured-inventory-grid">
@@ -129,10 +138,12 @@ export default async function Home() {
                   />
                 </div>
                 <div className="featured-cart-copy">
-                  <p className="featured-cart-price">{cart.price}</p>
-                  <h3>{cart.title}</h3>
-                  <p>{cart.description}</p>
-                  <a href={phoneHref}>Call or Text</a>
+                  <p className="featured-cart-price">
+                    {inventoryText("price", cart.id)}
+                  </p>
+                  <h3>{inventoryText("title", cart.id)}</h3>
+                  <p>{inventoryText("description", cart.id)}</p>
+                  <a href={phoneHref}>{c("inventory_preview", "card_cta")}</a>
                 </div>
               </article>
             ))}
@@ -150,15 +161,11 @@ export default async function Home() {
             />
           </div>
           <div className="home-feature-copy">
-            <p className="eyebrow">Built-to-Order</p>
-            <h2>Custom carts with a dealership-level finish.</h2>
-            <p>
-              Start with a late model Club Car Tempo and select the paint,
-              upholstery, wheels, lighting, sound, lift, and accessories that
-              fit how you ride.
-            </p>
+            <p className="eyebrow">{c("built_feature", "eyebrow")}</p>
+            <h2>{c("built_feature", "heading")}</h2>
+            <p>{c("built_feature", "copy")}</p>
             <Link className="btn btn-primary" href="/built-to-order">
-              Start Your Build
+              {c("built_feature", "button")}
             </Link>
           </div>
         </section>
@@ -174,14 +181,11 @@ export default async function Home() {
             />
           </div>
           <div className="home-feature-copy">
-            <p className="eyebrow">Mobile Service</p>
-            <h2>Service and repairs brought to your driveway.</h2>
-            <p>
-              Batteries, maintenance, diagnostics, repairs, and upgrades handled
-              locally across Greater Naples.
-            </p>
+            <p className="eyebrow">{c("service_feature", "eyebrow")}</p>
+            <h2>{c("service_feature", "heading")}</h2>
+            <p>{c("service_feature", "copy")}</p>
             <Link className="btn btn-primary" href="/services">
-              Schedule Service
+              {c("service_feature", "button")}
             </Link>
           </div>
         </section>
@@ -197,34 +201,28 @@ export default async function Home() {
             />
           </div>
           <div className="consignment-copy">
-            <p className="eyebrow">Consignment Sales</p>
-            <h2>Ready to sell your cart without the hassle?</h2>
-            <p>
-              We handle photos, listing, buyer calls, showings, and the sale so
-              the process stays simple from the first conversation to payment.
-            </p>
+            <p className="eyebrow">{c("consignment", "eyebrow")}</p>
+            <h2>{c("consignment", "heading")}</h2>
+            <p>{c("consignment", "copy")}</p>
             <Link className="btn btn-secondary dark" href="/consignment">
-              Learn About Consignment
+              {c("consignment", "button")}
             </Link>
           </div>
         </section>
 
         <section className="section home-section local-band">
           <div>
-            <p className="eyebrow">Greater Naples</p>
-            <h2>Local help for the neighborhoods we serve every day.</h2>
+            <p className="eyebrow">{c("local", "eyebrow")}</p>
+            <h2>{c("local", "heading")}</h2>
           </div>
-          <p>
-            Quail Creek, Quail Creek Estates, Esplanade, The Quarry, and the
-            surrounding Naples area.
-          </p>
+          <p>{c("local", "copy")}</p>
         </section>
 
         <section className="home-final-cta">
-          <p className="eyebrow">Smart Choice Golf Carts</p>
-          <h2>Need help choosing the right cart?</h2>
+          <p className="eyebrow">{c("final_cta", "eyebrow")}</p>
+          <h2>{c("final_cta", "heading")}</h2>
           <a className="btn btn-primary" href={phoneHref}>
-            Call or Text {phone}
+            {c("final_cta", "button_prefix")} {phone}
           </a>
         </section>
       </main>

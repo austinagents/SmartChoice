@@ -1,7 +1,15 @@
 import Image from "next/image";
 import SiteShell from "../components/SiteShell";
-import { inventoryImageSlots, inventoryItems, phone, phoneHref } from "../data";
+import {
+  inventoryContentSlots,
+  inventoryImageSlots,
+  inventoryItems,
+  footerContentSlots,
+  phone,
+  phoneHref,
+} from "../data";
 import { getInventoryImageMap } from "../lib/siteImages";
+import { contentValue, footerContentValues, getContentMap } from "../lib/siteContent";
 
 export const dynamic = "force-dynamic";
 
@@ -13,21 +21,24 @@ export const metadata = {
 
 export default async function PreOwnedInventory() {
   const inventoryImages = await getInventoryImageMap(inventoryImageSlots);
+  const content = await getContentMap([
+    ...inventoryContentSlots,
+    ...footerContentSlots,
+  ]);
+  const c = (sectionKey, contentKey, itemId = "") =>
+    contentValue(content, "pre-owned-inventory", sectionKey, contentKey, itemId);
 
   return (
-    <SiteShell>
+    <SiteShell footerContent={footerContentValues(content)}>
       <main>
         <section className="inventory-hero">
           <div>
-            <p className="eyebrow">Available Inventory</p>
-            <h1>Pre-Owned Golf Carts Ready for a New Driveway</h1>
-            <p>
-              Inventory changes quickly. Call or text to confirm availability,
-              ask questions, or schedule a time to see a cart in person.
-            </p>
+            <p className="eyebrow">{c("hero", "eyebrow")}</p>
+            <h1>{c("hero", "heading")}</h1>
+            <p>{c("hero", "copy")}</p>
           </div>
           <a className="btn btn-primary" href={phoneHref}>
-            Call or Text {phone}
+            {c("hero", "button_prefix")} {phone}
           </a>
         </section>
 
@@ -46,12 +57,14 @@ export default async function PreOwnedInventory() {
               </div>
               <div className="inventory-card-copy">
                 <div>
-                  <p className="inventory-price">{item.price}</p>
-                  <h2>{item.title}</h2>
+                  <p className="inventory-price">
+                    {c("inventory", "price", item.id)}
+                  </p>
+                  <h2>{c("inventory", "title", item.id)}</h2>
                 </div>
-                <p>{item.description}</p>
+                <p>{c("inventory", "description", item.id)}</p>
                 <a className="inventory-link" href={phoneHref}>
-                  Ask about this cart
+                  {c("inventory", "card_cta")}
                 </a>
               </div>
             </article>

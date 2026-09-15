@@ -82,6 +82,27 @@
   padding: 12px 14px;
 }
 
+.admin-content-field input,
+.admin-content-field textarea {
+  background: #090c0b;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  color: white;
+  font: inherit;
+  padding: 12px 14px;
+  width: 100%;
+}
+
+.admin-content-field input {
+  min-height: 46px;
+}
+
+.admin-content-field textarea {
+  line-height: 1.5;
+  min-height: 120px;
+  resize: vertical;
+}
+
 .admin-primary,
 .admin-secondary,
 .admin-upload-button {
@@ -152,6 +173,10 @@
   color: white;
 }
 
+.admin-subtabs {
+  margin-top: -10px;
+}
+
 .admin-success,
 .admin-error {
   border-radius: 6px;
@@ -178,6 +203,45 @@
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   margin-inline: auto;
   max-width: 1180px;
+}
+
+.admin-content-list {
+  display: grid;
+  gap: 14px;
+  margin-inline: auto;
+  max-width: 1180px;
+}
+
+.admin-content-field {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+}
+
+.admin-content-field label {
+  color: var(--muted-strong);
+  display: grid;
+  font-size: 0.95rem;
+  font-weight: 800;
+  gap: 4px;
+}
+
+.admin-content-field label span {
+  color: var(--green);
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.admin-content-actions {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
 }
 
 .admin-image-group {
@@ -265,6 +329,11 @@
 @media (max-width: 720px) {
   .admin-topbar,
   .admin-group-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-content-actions {
     align-items: stretch;
     flex-direction: column;
   }

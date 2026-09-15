@@ -5,13 +5,15 @@ import { useCallback, useEffect, useMemo, useState, useTransition } from "react"
 import { adminImageConfig } from "../lib/adminImageConfig";
 import { getSupabaseBrowserClient } from "../lib/supabaseBrowser";
 import { getPublicImageUrl, hasSupabaseConfig, siteImagesBucket } from "../lib/supabaseConfig";
+import { siteContentPages } from "../data";
 
-const pageLabels = {
+const imagePageLabels = {
   homepage: "Homepage",
   inventory: "Pre-Owned Inventory",
 };
 
 const allAdminSlots = [...adminImageConfig.homepage, ...adminImageConfig.inventory];
+const allContentSlots = siteContentPages.flatMap((page) => page.slots);
 const localAdminBypass = true;
 
 function makeStoragePath(slot, file) {
@@ -31,6 +33,10 @@ function getSlotKey(slot) {
   return `${slot.page}:${slot.sectionKey}:${slot.slotKey}:${slot.itemId || ""}`;
 }
 
+function getContentSlotKey(slot) {
+  return `${slot.page}:${slot.sectionKey}:${slot.contentKey}:${slot.itemId || ""}`;
+}
+
 function fallbackRecord(slot) {
   return {
     id: null,
@@ -42,6 +48,17 @@ function fallbackRecord(slot) {
     alt_text: slot.alt || slot.label,
     sort_order: 0,
     src: slot.fallbackSrc,
+    isFallback: true,
+  };
+}
+
+function fallbackContentRecord(slot) {
+  return {
+    page: slot.page,
+    section_key: slot.sectionKey,
+    content_key: slot.contentKey,
+    item_id: slot.itemId || "",
+    value: slot.value,
     isFallback: true,
   };
 }
@@ -62,8 +79,11 @@ export default function AdminImageManager() {
   const [authChecked, setAuthChecked] = useState(!hasConfig);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [activeTab, setActiveTab] = useState("homepage");
+  const [activeSection, setActiveSection] = useState("images");
+  const [activeImageTab, setActiveImageTab] = useState("homepage");
+  const [activeContentPage, setActiveContentPage] = useState(siteContentPages[0].key);
   const [records, setRecords] = useState({});
+  const [contentRecords, setContentRecords] = useState({});
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -105,6 +125,50 @@ export default function AdminImageManager() {
     setRecords(nextRecords);
   }, [clearStatus, supabase]);
 
+  const loadContent = useCallback(async () => {
+    clearStatus();
+
+    function applyDefaultContent() {
+      const nextRecords = {};
+      for (const slot of allContentSlots) {
+        nextRecords[getContentSlotKey(slot)] = fallbackContentRecord(slot);
+      }
+      setContentRecords(nextRecords);
+    }
+
+    const { data, error: loadError } = await supabase
+      .from("site_content")
+      .select("*")
+      .order("page", { ascending: true })
+      .order("section_key", { ascending: true })
+      .order("content_key", { ascending: true });
+
+    if (loadError) {
+      if (loadError.message.includes("site_content")) {
+        applyDefaultContent();
+        return;
+      }
+
+      setError(loadError.message);
+      return;
+    }
+
+    const nextRecords = {};
+    for (const slot of allContentSlots) {
+      const match = (data || []).find(
+        (record) =>
+          record.page === slot.page &&
+          record.section_key === slot.sectionKey &&
+          record.content_key === slot.contentKey &&
+          (record.item_id || "") === (slot.itemId || "")
+      );
+
+      nextRecords[getContentSlotKey(slot)] = match || fallbackContentRecord(slot);
+    }
+
+    setContentRecords(nextRecords);
+  }, [clearStatus, supabase]);
+
   useEffect(() => {
     if (!supabase) {
       return;
@@ -116,6 +180,7 @@ export default function AdminImageManager() {
       setAuthChecked(true);
       if (currentSession || localAdminBypass) {
         loadImages();
+        loadContent();
       }
     });
 
@@ -125,11 +190,12 @@ export default function AdminImageManager() {
       setSession(nextSession);
       if (nextSession || localAdminBypass) {
         loadImages();
+        loadContent();
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [loadImages, supabase]);
+  }, [loadContent, loadImages, supabase]);
 
   async function signIn(event) {
     event.preventDefault();
@@ -152,6 +218,7 @@ export default function AdminImageManager() {
     clearStatus();
     await supabase.auth.signOut();
     setRecords({});
+    setContentRecords({});
   }
 
   async function removeStorageObjectWhenUnused(storagePath) {
@@ -186,13 +253,19 @@ export default function AdminImageManager() {
     return storagePath;
   }
 
-  function runMutation(operation) {
+  function runMutation(
+    operation,
+    {
+      reload = loadImages,
+      successMessage = "Saved. The live site will use this image on the next page load.",
+    } = {}
+  ) {
     clearStatus();
     startTransition(async () => {
       try {
         await operation();
-        await loadImages();
-        setMessage("Saved. The live site will use this image on the next page load.");
+        await reload();
+        setMessage(successMessage);
       } catch (mutationError) {
         setError(mutationError.message || "Something went wrong.");
       }
@@ -316,6 +389,48 @@ export default function AdminImageManager() {
     });
   }
 
+  function updateContentDraft(slot, value) {
+    const key = getContentSlotKey(slot);
+    setContentRecords((current) => ({
+      ...current,
+      [key]: {
+        ...(current[key] || fallbackContentRecord(slot)),
+        value,
+      },
+    }));
+  }
+
+  async function saveContent(slot) {
+    const key = getContentSlotKey(slot);
+    const record = contentRecords[key] || fallbackContentRecord(slot);
+
+    runMutation(
+      async () => {
+        const { error: upsertError } = await supabase.from("site_content").upsert(
+          {
+            page: slot.page,
+            section_key: slot.sectionKey,
+            content_key: slot.contentKey,
+            item_id: slot.itemId || "",
+            value: record.value,
+            updated_at: new Date().toISOString(),
+          },
+          {
+            onConflict: "page,section_key,content_key,item_id",
+          }
+        );
+
+        if (upsertError) {
+          throw upsertError;
+        }
+      },
+      {
+        reload: loadContent,
+        successMessage: "Saved. The live site will use this text on the next page load.",
+      }
+    );
+  }
+
   if (!hasConfig || !supabase) {
     return (
       <main className="admin-page">
@@ -373,122 +488,206 @@ export default function AdminImageManager() {
     );
   }
 
-  const slots = adminImageConfig[activeTab];
+  const slots = adminImageConfig[activeImageTab];
+  const activeContentConfig = siteContentPages.find(
+    (page) => page.key === activeContentPage
+  );
 
   return (
     <main className="admin-page">
       <header className="admin-topbar">
         <div>
           <p className="admin-kicker">Smart Choice Golf Carts</p>
-          <h1>Image Admin</h1>
+          <h1>Site Admin</h1>
         </div>
         <button className="admin-secondary" type="button" onClick={signOut}>
           Log Out
         </button>
       </header>
 
-      <nav className="admin-tabs" aria-label="Admin sections">
-        {Object.keys(pageLabels).map((tab) => (
+      <nav className="admin-tabs" aria-label="Admin tools">
+        {[
+          ["images", "Images"],
+          ["content", "Text / Content"],
+        ].map(([section, label]) => (
           <button
-            key={tab}
-            className={activeTab === tab ? "active" : ""}
+            key={section}
+            className={activeSection === section ? "active" : ""}
             type="button"
-            onClick={() => setActiveTab(tab)}
+            onClick={() => setActiveSection(section)}
           >
-            {pageLabels[tab]}
+            {label}
           </button>
         ))}
       </nav>
 
+      {activeSection === "images" ? (
+        <nav className="admin-tabs admin-subtabs" aria-label="Image sections">
+          {Object.keys(imagePageLabels).map((tab) => (
+            <button
+              key={tab}
+              className={activeImageTab === tab ? "active" : ""}
+              type="button"
+              onClick={() => setActiveImageTab(tab)}
+            >
+              {imagePageLabels[tab]}
+            </button>
+          ))}
+        </nav>
+      ) : (
+        <nav className="admin-tabs admin-subtabs" aria-label="Content pages">
+          {siteContentPages.map((page) => (
+            <button
+              key={page.key}
+              className={activeContentPage === page.key ? "active" : ""}
+              type="button"
+              onClick={() => setActiveContentPage(page.key)}
+            >
+              {page.label}
+            </button>
+          ))}
+        </nav>
+      )}
+
       {message ? <p className="admin-success">{message}</p> : null}
       {error ? <p className="admin-error">{error}</p> : null}
 
-      <section className="admin-image-list" aria-busy={isPending}>
-        {slots.map((slot) => {
-          const key = getSlotKey(slot);
-          const images = records[key] || [fallbackRecord(slot)];
-          const isInventory = slot.page === "pre-owned-inventory";
+      {activeSection === "images" ? (
+        <section className="admin-image-list" aria-busy={isPending}>
+          {slots.map((slot) => {
+            const key = getSlotKey(slot);
+            const images = records[key] || [fallbackRecord(slot)];
+            const isInventory = slot.page === "pre-owned-inventory";
 
-          return (
-            <article className="admin-image-group" key={key}>
-              <div className="admin-group-heading">
-                <div>
-                  <p>{isInventory ? "Inventory Listing" : "Homepage Section"}</p>
-                  <h2>{slot.label}</h2>
-                </div>
-                {isInventory ? (
-                  <label className="admin-upload-button">
-                    Add Image
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(event) => addInventoryImage(slot, event.target.files?.[0])}
-                    />
-                  </label>
-                ) : null}
-              </div>
-
-              <div className="admin-images-grid">
-                {images.map((record, index) => (
-                  <div className="admin-image-card" key={record.id || `${key}-fallback`}>
-                    <div className="admin-preview">
-                      <Image
-                        unoptimized
-                        src={record.src}
-                        alt={record.alt_text || slot.label}
-                        fill
-                        sizes="(max-width: 900px) 100vw, 360px"
-                      />
-                    </div>
-                    <div className="admin-image-actions">
-                      <label className="admin-upload-button">
-                        Replace
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(event) =>
-                            replaceImage(slot, record, event.target.files?.[0])
-                          }
-                        />
-                      </label>
-                      <button
-                        className="admin-secondary"
-                        type="button"
-                        onClick={() => deleteImage(record)}
-                      >
-                        Delete
-                      </button>
-                      {isInventory && !record.isFallback ? (
-                        <>
-                          <button
-                            className="admin-secondary"
-                            type="button"
-                            onClick={() => moveImage(slot, index, -1)}
-                            disabled={index === 0}
-                          >
-                            Move Up
-                          </button>
-                          <button
-                            className="admin-secondary"
-                            type="button"
-                            onClick={() => moveImage(slot, index, 1)}
-                            disabled={index === images.length - 1}
-                          >
-                            Move Down
-                          </button>
-                        </>
-                      ) : null}
-                    </div>
-                    <p className="admin-note">
-                      {record.isFallback ? "Original site image" : index === 0 ? "Primary image" : `Image ${index + 1}`}
-                    </p>
+            return (
+              <article className="admin-image-group" key={key}>
+                <div className="admin-group-heading">
+                  <div>
+                    <p>{isInventory ? "Inventory Listing" : "Homepage Section"}</p>
+                    <h2>{slot.label}</h2>
                   </div>
-                ))}
-              </div>
-            </article>
-          );
-        })}
-      </section>
+                  {isInventory ? (
+                    <label className="admin-upload-button">
+                      Add Image
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(event) => addInventoryImage(slot, event.target.files?.[0])}
+                      />
+                    </label>
+                  ) : null}
+                </div>
+
+                <div className="admin-images-grid">
+                  {images.map((record, index) => (
+                    <div className="admin-image-card" key={record.id || `${key}-fallback`}>
+                      <div className="admin-preview">
+                        <Image
+                          unoptimized
+                          src={record.src}
+                          alt={record.alt_text || slot.label}
+                          fill
+                          sizes="(max-width: 900px) 100vw, 360px"
+                        />
+                      </div>
+                      <div className="admin-image-actions">
+                        <label className="admin-upload-button">
+                          Replace
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(event) =>
+                              replaceImage(slot, record, event.target.files?.[0])
+                            }
+                          />
+                        </label>
+                        <button
+                          className="admin-secondary"
+                          type="button"
+                          onClick={() => deleteImage(record)}
+                        >
+                          Delete
+                        </button>
+                        {isInventory && !record.isFallback ? (
+                          <>
+                            <button
+                              className="admin-secondary"
+                              type="button"
+                              onClick={() => moveImage(slot, index, -1)}
+                              disabled={index === 0}
+                            >
+                              Move Up
+                            </button>
+                            <button
+                              className="admin-secondary"
+                              type="button"
+                              onClick={() => moveImage(slot, index, 1)}
+                              disabled={index === images.length - 1}
+                            >
+                              Move Down
+                            </button>
+                          </>
+                        ) : null}
+                      </div>
+                      <p className="admin-note">
+                        {record.isFallback ? "Original site image" : index === 0 ? "Primary image" : `Image ${index + 1}`}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            );
+          })}
+        </section>
+      ) : (
+        <section className="admin-content-list" aria-busy={isPending}>
+          {activeContentConfig.slots.map((slot) => {
+            const key = getContentSlotKey(slot);
+            const record = contentRecords[key] || fallbackContentRecord(slot);
+            const sectionLabel = slot.sectionKey
+              .split("_")
+              .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+              .join(" ");
+            const fieldId = `content-${key.replace(/[^a-z0-9_-]/gi, "-")}`;
+
+            return (
+              <article className="admin-content-field" key={key}>
+                <label htmlFor={fieldId}>
+                  <span>{sectionLabel}</span>
+                  {slot.label}
+                </label>
+                {slot.inputType === "long" ? (
+                  <textarea
+                    id={fieldId}
+                    value={record.value}
+                    onChange={(event) => updateContentDraft(slot, event.target.value)}
+                    rows={4}
+                  />
+                ) : (
+                  <input
+                    id={fieldId}
+                    type="text"
+                    value={record.value}
+                    onChange={(event) => updateContentDraft(slot, event.target.value)}
+                  />
+                )}
+                <div className="admin-content-actions">
+                  <p className="admin-note">
+                    {record.isFallback ? "Default site text" : "Supabase override"}
+                  </p>
+                  <button
+                    className="admin-primary"
+                    type="button"
+                    onClick={() => saveContent(slot)}
+                  >
+                    Save
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+        </section>
+      )}
     </main>
   );
 }

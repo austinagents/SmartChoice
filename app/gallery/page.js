@@ -1,14 +1,24 @@
 import SiteShell from "../components/SiteShell";
 import LocalImage from "../components/LocalImage";
-import { galleryImages } from "../data";
+import { footerContentSlots, galleryContentSlots, galleryImages } from "../data";
+import { contentValue, footerContentValues, getContentMap } from "../lib/siteContent";
 
-export default function Gallery() {
+export const dynamic = "force-dynamic";
+
+export default async function Gallery() {
+  const content = await getContentMap([
+    ...galleryContentSlots,
+    ...footerContentSlots,
+  ]);
+  const c = (sectionKey, contentKey) =>
+    contentValue(content, "gallery", sectionKey, contentKey);
+
   return (
-    <SiteShell>
+    <SiteShell footerContent={footerContentValues(content)}>
       <main>
         <section className="gallery-intro">
-          <p className="eyebrow">Gallery</p>
-          <h1>Recent carts, custom details, and service work.</h1>
+          <p className="eyebrow">{c("intro", "eyebrow")}</p>
+          <h1>{c("intro", "heading")}</h1>
         </section>
         <section className="gallery-grid" aria-label="Smart Choice cart gallery">
           {galleryImages.map((image, index) => (
