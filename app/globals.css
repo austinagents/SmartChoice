@@ -281,8 +281,13 @@
 .admin-images-grid {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
   justify-content: start;
+}
+
+.admin-add-homepage-image {
+  align-items: center;
+  display: flex;
 }
 
 .admin-image-card {
@@ -480,7 +485,91 @@ img {
   width: 100%;
 }
 
+.image-carousel {
+  height: 100%;
+  inset: 0;
+  overflow: hidden;
+  position: absolute;
+  width: 100%;
+}
+
+.image-carousel img {
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 220ms ease;
+  width: 100%;
+}
+
+.image-carousel img.active {
+  opacity: 1;
+}
+
+.carousel-button {
+  align-items: center;
+  background: rgba(8, 11, 10, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: 999px;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  font-size: 0.72rem;
+  font-weight: 800;
+  height: 36px;
+  justify-content: center;
+  letter-spacing: 0.02em;
+  padding: 0 12px;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+}
+
+.carousel-button.previous {
+  left: 12px;
+}
+
+.carousel-button.next {
+  right: 12px;
+}
+
+.carousel-button:hover,
+.carousel-button:focus-visible {
+  background: rgba(8, 185, 139, 0.88);
+}
+
+.carousel-dots {
+  align-items: center;
+  bottom: 14px;
+  display: flex;
+  gap: 7px;
+  justify-content: center;
+  left: 50%;
+  position: absolute;
+  transform: translateX(-50%);
+  z-index: 2;
+}
+
+.carousel-dots button {
+  background: rgba(255, 255, 255, 0.48);
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  height: 7px;
+  padding: 0;
+  width: 7px;
+}
+
+.carousel-dots button[aria-current="true"] {
+  background: white;
+  width: 18px;
+}
+
 .hero-home > img {
+  object-position: 62% center;
+}
+
+.hero-home .image-carousel img {
   object-position: 62% center;
 }
 
@@ -698,8 +787,10 @@ p {
 
 .department-card-copy {
   align-self: end;
+  color: inherit;
   padding: 28px;
   position: relative;
+  text-decoration: none;
   z-index: 1;
 }
 
@@ -1179,6 +1270,10 @@ p {
 }
 
 .service-crop img {
+  object-position: center 58%;
+}
+
+.service-crop .image-carousel img {
   object-position: center 58%;
 }
 

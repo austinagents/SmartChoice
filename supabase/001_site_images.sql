@@ -20,12 +20,12 @@ create table if not exists public.site_images (
   constraint site_images_sort_order_check check (sort_order >= 0)
 );
 
-create unique index if not exists site_images_single_slot_unique
-  on public.site_images (page, section_key, slot_key)
-  where item_id is null;
-
 create index if not exists site_images_lookup_idx
   on public.site_images (page, section_key, slot_key, item_id, sort_order);
+
+create index if not exists site_images_homepage_carousel_lookup_idx
+  on public.site_images (page, section_key, slot_key, sort_order)
+  where item_id is null;
 
 -- Legacy admin auth support is retained, but /admin currently uses
 -- localAdminBypass = true and writes through the public anon key.

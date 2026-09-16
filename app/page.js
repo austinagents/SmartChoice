@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import ImageCarousel from "./components/ImageCarousel";
 import SiteShell from "./components/SiteShell";
 import {
   homepageImageSlots,
@@ -61,11 +62,9 @@ export default async function Home() {
     <SiteShell footerContent={footerContentValues(content)}>
       <main className="home-page">
         <section className="hero hero-home">
-          <Image
-            unoptimized
-            src={homepageImages.hero_image.src}
+          <ImageCarousel
+            images={homepageImages.hero_image}
             alt=""
-            fill
             priority
             sizes="100vw"
           />
@@ -95,21 +94,19 @@ export default async function Home() {
           </div>
           <div className="department-grid">
             {whatWeDo.map((item) => (
-              <Link href={item.href} className="department-card" key={item.title}>
+              <article className="department-card" key={item.title}>
                 <div className="department-card-image">
-                  <Image
-                    unoptimized
-                    src={homepageImages[item.slotKey].src}
+                  <ImageCarousel
+                    images={homepageImages[item.slotKey]}
                     alt=""
-                    fill
                     sizes="(max-width: 720px) 100vw, (max-width: 1280px) 50vw, 25vw"
                   />
                 </div>
-                <div className="department-card-copy">
+                <Link href={item.href} className="department-card-copy">
                   <h3>{item.title}</h3>
                   <p>{item.text}</p>
-                </div>
-              </Link>
+                </Link>
+              </article>
             ))}
           </div>
         </section>
@@ -152,11 +149,9 @@ export default async function Home() {
 
         <section className="home-feature-band">
           <div className="home-feature-image">
-            <Image
-              unoptimized
-              src={homepageImages.built_to_order_feature.src}
+            <ImageCarousel
+              images={homepageImages.built_to_order_feature}
               alt=""
-              fill
               sizes="(max-width: 980px) 100vw, 50vw"
             />
           </div>
@@ -172,11 +167,9 @@ export default async function Home() {
 
         <section className="home-feature-band reverse">
           <div className="home-feature-image service-crop">
-            <Image
-              unoptimized
-              src={homepageImages.mobile_service_feature.src}
+            <ImageCarousel
+              images={homepageImages.mobile_service_feature}
               alt=""
-              fill
               sizes="(max-width: 980px) 100vw, 50vw"
             />
           </div>
@@ -192,11 +185,9 @@ export default async function Home() {
 
         <section className="section home-section consignment-panel">
           <div className="consignment-image">
-            <Image
-              unoptimized
-              src={homepageImages.consignment_feature.src}
+            <ImageCarousel
+              images={homepageImages.consignment_feature}
               alt=""
-              fill
               sizes="(max-width: 980px) 100vw, 44vw"
             />
           </div>

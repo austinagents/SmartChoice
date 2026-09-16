@@ -15,6 +15,7 @@ const imagePageLabels = {
 const allAdminSlots = [...adminImageConfig.homepage, ...adminImageConfig.inventory];
 const allContentSlots = siteContentPages.flatMap((page) => page.slots);
 const localAdminBypass = true;
+const maxHomepageImages = 7;
 
 function makeStoragePath(slot, file) {
   const extension = file.name.includes(".") ? file.name.split(".").pop() : "jpg";
@@ -299,6 +300,16 @@ export default function AdminImageManager() {
         return;
       }
 
+      if (slot.page === "homepage") {
+        const current = records[getSlotKey(slot)] || [];
+        const existing = current.filter((item) => !item.isFallback);
+
+        if (existing.length >= maxHomepageImages) {
+          await supabase.storage.from(siteImagesBucket).remove([storagePath]);
+          throw new Error("Homepage sections can have up to 7 images.");
+        }
+      }
+
       const { error: insertError } = await supabase.from("site_images").insert({
         page: slot.page,
         section_key: slot.sectionKey,
@@ -310,6 +321,44 @@ export default function AdminImageManager() {
       });
 
       if (insertError) {
+        await supabase.storage.from(siteImagesBucket).remove([storagePath]);
+        throw insertError;
+      }
+    });
+  }
+
+  async function addHomepageImage(slot, file) {
+    if (!file) {
+      return;
+    }
+
+    runMutation(async () => {
+      const existing = await loadSlotImageRecords(slot);
+
+      if (existing.length >= maxHomepageImages) {
+        throw new Error("Homepage sections can have up to 7 images.");
+      }
+
+      const storagePath = await uploadFile(slot, file);
+      const latestExisting = await loadSlotImageRecords(slot);
+
+      if (latestExisting.length >= maxHomepageImages) {
+        await supabase.storage.from(siteImagesBucket).remove([storagePath]);
+        throw new Error("Homepage sections can have up to 7 images.");
+      }
+
+      const { error: insertError } = await supabase.from("site_images").insert({
+        page: slot.page,
+        section_key: slot.sectionKey,
+        slot_key: slot.slotKey,
+        item_id: null,
+        storage_path: storagePath,
+        alt_text: slot.alt || slot.label,
+        sort_order: latestExisting.length,
+      });
+
+      if (insertError) {
+        await supabase.storage.from(siteImagesBucket).remove([storagePath]);
         throw insertError;
       }
     });
@@ -336,9 +385,31 @@ export default function AdminImageManager() {
       });
 
       if (insertError) {
+        await supabase.storage.from(siteImagesBucket).remove([storagePath]);
         throw insertError;
       }
     });
+  }
+
+  async function loadSlotImageRecords(slot) {
+    let query = supabase
+      .from("site_images")
+      .select("id,sort_order,created_at")
+      .eq("page", slot.page)
+      .eq("section_key", slot.sectionKey)
+      .eq("slot_key", slot.slotKey)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true });
+
+    query = slot.itemId ? query.eq("item_id", slot.itemId) : query.is("item_id", null);
+
+    const { data, error: loadError } = await query;
+
+    if (loadError) {
+      throw loadError;
+    }
+
+    return data || [];
   }
 
   async function deleteImage(record) {
@@ -359,7 +430,38 @@ export default function AdminImageManager() {
       }
 
       await removeStorageObjectWhenUnused(storagePath);
+      await normalizeSlotOrder(record);
     });
+  }
+
+  async function normalizeSlotOrder(record) {
+    let query = supabase
+      .from("site_images")
+      .select("id")
+      .eq("page", record.page)
+      .eq("section_key", record.section_key)
+      .eq("slot_key", record.slot_key)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true });
+
+    query = record.item_id ? query.eq("item_id", record.item_id) : query.is("item_id", null);
+
+    const { data, error: loadError } = await query;
+
+    if (loadError) {
+      throw loadError;
+    }
+
+    for (let sortOrder = 0; sortOrder < data.length; sortOrder += 1) {
+      const { error: updateError } = await supabase
+        .from("site_images")
+        .update({ sort_order: sortOrder, updated_at: new Date().toISOString() })
+        .eq("id", data[sortOrder].id);
+
+      if (updateError) {
+        throw updateError;
+      }
+    }
   }
 
   async function moveImage(slot, index, direction) {
@@ -558,6 +660,10 @@ export default function AdminImageManager() {
             const key = getSlotKey(slot);
             const images = records[key] || [fallbackRecord(slot)];
             const isInventory = slot.page === "pre-owned-inventory";
+            const isHomepage = slot.page === "homepage";
+            const realImages = images.filter((image) => !image.isFallback);
+            const imageCount = realImages.length;
+            const canAddHomepageImage = isHomepage && imageCount < maxHomepageImages;
 
             return (
               <article className="admin-image-group" key={key}>
@@ -576,64 +682,84 @@ export default function AdminImageManager() {
                       />
                     </label>
                   ) : null}
-                </div>
-
-                <div className="admin-images-grid">
-                  {images.map((record, index) => (
-                    <div className="admin-image-card" key={record.id || `${key}-fallback`}>
-                      <div className="admin-preview">
-                        <Image
-                          unoptimized
-                          src={record.src}
-                          alt={record.alt_text || slot.label}
-                          fill
-                          sizes="(max-width: 900px) 100vw, 360px"
-                        />
-                      </div>
-                      <div className="admin-image-actions">
+                  {isHomepage ? (
+                    <div className="admin-add-homepage-image">
+                      {canAddHomepageImage ? (
                         <label className="admin-upload-button">
-                          Replace
+                          Add Image
                           <input
                             type="file"
                             accept="image/*"
-                            onChange={(event) =>
-                              replaceImage(slot, record, event.target.files?.[0])
-                            }
+                            onChange={(event) => addHomepageImage(slot, event.target.files?.[0])}
                           />
                         </label>
-                        <button
-                          className="admin-secondary"
-                          type="button"
-                          onClick={() => deleteImage(record)}
-                        >
-                          Delete
-                        </button>
-                        {isInventory && !record.isFallback ? (
-                          <>
-                            <button
-                              className="admin-secondary"
-                              type="button"
-                              onClick={() => moveImage(slot, index, -1)}
-                              disabled={index === 0}
-                            >
-                              Move Up
-                            </button>
-                            <button
-                              className="admin-secondary"
-                              type="button"
-                              onClick={() => moveImage(slot, index, 1)}
-                              disabled={index === images.length - 1}
-                            >
-                              Move Down
-                            </button>
-                          </>
-                        ) : null}
-                      </div>
-                      <p className="admin-note">
-                        {record.isFallback ? "Original site image" : index === 0 ? "Primary image" : `Image ${index + 1}`}
-                      </p>
+                      ) : (
+                        <p className="admin-note">Maximum 7 images reached</p>
+                      )}
                     </div>
-                  ))}
+                  ) : null}
+                </div>
+
+                <div className="admin-images-grid">
+                  {images.map((record, index) => {
+                    const realIndex = realImages.findIndex((item) => item.id === record.id);
+
+                    return (
+                      <div className="admin-image-card" key={record.id || `${key}-fallback`}>
+                        <div className="admin-preview">
+                          <Image
+                            unoptimized
+                            src={record.src}
+                            alt={record.alt_text || slot.label}
+                            fill
+                            sizes="(max-width: 900px) 100vw, 360px"
+                          />
+                        </div>
+                        <div className="admin-image-actions">
+                          <label className="admin-upload-button">
+                            Replace
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(event) =>
+                                replaceImage(slot, record, event.target.files?.[0])
+                              }
+                            />
+                          </label>
+                          <button
+                            className="admin-secondary"
+                            type="button"
+                            onClick={() => deleteImage(record)}
+                          >
+                            Delete
+                          </button>
+                          {(isInventory || isHomepage) && !record.isFallback ? (
+                            <>
+                              <button
+                                className="admin-secondary"
+                                type="button"
+                                onClick={() => moveImage(slot, realIndex, -1)}
+                                disabled={realIndex === 0}
+                              >
+                                Move Up
+                              </button>
+                              <button
+                                className="admin-secondary"
+                                type="button"
+                                onClick={() => moveImage(slot, realIndex, 1)}
+                                disabled={realIndex === realImages.length - 1}
+                              >
+                                Move Down
+                              </button>
+                            </>
+                          ) : null}
+                        </div>
+                        <p className="admin-note">
+                          {record.isFallback ? "Original site image" : index === 0 ? "Primary image" : `Image ${index + 1}`}
+                        </p>
+                      </div>
+                    );
+                  })}
                 </div>
               </article>
             );

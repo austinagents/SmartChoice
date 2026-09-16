@@ -69,7 +69,7 @@ export async function getHomepageImageMap(slots) {
   const map = {};
 
   for (const slot of slots) {
-    const record = records.find(
+    const matches = records.filter(
       (item) =>
         item.page === slot.page &&
         item.section_key === slot.sectionKey &&
@@ -77,9 +77,9 @@ export async function getHomepageImageMap(slots) {
         !item.item_id
     );
 
-    map[slot.slotKey] = record
-      ? imageRecordToEntry(record, slot.alt)
-      : fallbackEntry(slot);
+    map[slot.slotKey] = matches.length
+      ? matches.map((record) => imageRecordToEntry(record, slot.alt))
+      : [fallbackEntry(slot)];
   }
 
   return map;

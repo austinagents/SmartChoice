@@ -41,6 +41,11 @@ policies for only:
 Then paste and run `supabase/003_site_content.sql` to add the text/content
 override table and anon content-editing policies.
 
+For existing projects that already have homepage image records, paste and run
+`supabase/004_homepage_image_carousels.sql` before adding carousel images. This
+removes the old one-homepage-image-per-slot unique index while preserving all
+current rows and Storage files.
+
 ## One-Time Image Seed
 
 After the SQL has run and local `.env.local` contains the Supabase URL and service-role key, run:
