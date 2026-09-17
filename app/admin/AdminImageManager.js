@@ -73,6 +73,39 @@ function recordWithSrc(record, slot) {
   };
 }
 
+function emptyHomepageRecord(slot, index) {
+  return {
+    id: null,
+    page: slot.page,
+    section_key: slot.sectionKey,
+    slot_key: slot.slotKey,
+    item_id: null,
+    storage_path: null,
+    alt_text: slot.alt || slot.label,
+    sort_order: index,
+    src: null,
+    isEmptySlot: true,
+  };
+}
+
+function homepageDisplayImages(slot, images) {
+  const displayImages = Array.from({ length: maxHomepageImages }, (_item, index) =>
+    index === 0 ? fallbackRecord(slot) : emptyHomepageRecord(slot, index)
+  );
+
+  for (const record of images.filter((item) => !item.isFallback)) {
+    const sortOrder = Number.isInteger(Number(record.sort_order))
+      ? Number(record.sort_order)
+      : 0;
+
+    if (sortOrder >= 0 && sortOrder < maxHomepageImages) {
+      displayImages[sortOrder] = record;
+    }
+  }
+
+  return displayImages;
+}
+
 export default function AdminImageManager() {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const hasConfig = hasSupabaseConfig();
@@ -317,7 +350,7 @@ export default function AdminImageManager() {
         item_id: slot.itemId || null,
         storage_path: storagePath,
         alt_text: slot.alt || slot.label,
-        sort_order: 0,
+        sort_order: record.sort_order || 0,
       });
 
       if (insertError) {
@@ -327,7 +360,7 @@ export default function AdminImageManager() {
     });
   }
 
-  async function addHomepageImage(slot, file) {
+  async function addHomepageImage(slot, file, sortOrder) {
     if (!file) {
       return;
     }
@@ -354,7 +387,7 @@ export default function AdminImageManager() {
         item_id: null,
         storage_path: storagePath,
         alt_text: slot.alt || slot.label,
-        sort_order: latestExisting.length,
+        sort_order: Number.isInteger(sortOrder) ? sortOrder : latestExisting.length,
       });
 
       if (insertError) {
@@ -468,6 +501,38 @@ export default function AdminImageManager() {
     const key = getSlotKey(slot);
     const images = (records[key] || []).filter((item) => !item.isFallback);
     const nextIndex = index + direction;
+
+    if (slot.page === "homepage") {
+      if (nextIndex < 0 || nextIndex >= maxHomepageImages) {
+        return;
+      }
+
+      const moved = images.find((item) => Number(item.sort_order) === index);
+
+      if (!moved) {
+        return;
+      }
+
+      runMutation(async () => {
+        const target = images.find((item) => Number(item.sort_order) === nextIndex);
+        const updates = [
+          { id: moved.id, sort_order: nextIndex },
+          ...(target ? [{ id: target.id, sort_order: index }] : []),
+        ];
+
+        for (const update of updates) {
+          const { error: updateError } = await supabase
+            .from("site_images")
+            .update({ sort_order: update.sort_order, updated_at: new Date().toISOString() })
+            .eq("id", update.id);
+
+          if (updateError) {
+            throw updateError;
+          }
+        }
+      });
+      return;
+    }
 
     if (nextIndex < 0 || nextIndex >= images.length) {
       return;
@@ -660,13 +725,13 @@ export default function AdminImageManager() {
             const key = getSlotKey(slot);
             const images = records[key] || [fallbackRecord(slot)];
             const isInventory = slot.page === "pre-owned-inventory";
-            const isHomepage = slot.page === "homepage";
-            const realImages = images.filter((image) => !image.isFallback);
-            const imageCount = realImages.length;
-            const canAddHomepageImage = isHomepage && imageCount < maxHomepageImages;
+            const visibleImages = isInventory ? images : homepageDisplayImages(slot, images);
 
             return (
-              <article className="admin-image-group" key={key}>
+              <article
+                className={`admin-image-group${isInventory ? "" : " admin-homepage-image-group"}`}
+                key={key}
+              >
                 <div className="admin-group-heading">
                   <div>
                     <p>{isInventory ? "Inventory Listing" : "Homepage Section"}</p>
@@ -682,30 +747,19 @@ export default function AdminImageManager() {
                       />
                     </label>
                   ) : null}
-                  {isHomepage ? (
-                    <div className="admin-add-homepage-image">
-                      {canAddHomepageImage ? (
-                        <label className="admin-upload-button">
-                          Add Image
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(event) => addHomepageImage(slot, event.target.files?.[0])}
-                          />
-                        </label>
-                      ) : (
-                        <p className="admin-note">Maximum 7 images reached</p>
-                      )}
-                    </div>
-                  ) : null}
                 </div>
 
                 <div className="admin-images-grid">
-                  {images.map((record, index) => {
-                    const realIndex = realImages.findIndex((item) => item.id === record.id);
-
-                    return (
-                      <div className="admin-image-card" key={record.id || `${key}-fallback`}>
+                  {visibleImages.map((record, index) => (
+                    <div
+                      className={`admin-image-card${record.isEmptySlot ? " admin-empty-image-card" : ""}`}
+                      key={record.id || `${key}-slot-${index}`}
+                    >
+                      {record.isEmptySlot ? (
+                        <div className="admin-empty-preview">
+                          <span>Image {index + 1}</span>
+                        </div>
+                      ) : (
                         <div className="admin-preview">
                           <Image
                             unoptimized
@@ -715,17 +769,21 @@ export default function AdminImageManager() {
                             sizes="(max-width: 900px) 100vw, 360px"
                           />
                         </div>
-                        <div className="admin-image-actions">
-                          <label className="admin-upload-button">
-                            Replace
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={(event) =>
-                                replaceImage(slot, record, event.target.files?.[0])
-                              }
-                            />
-                          </label>
+                      )}
+                      <div className="admin-image-actions">
+                        <label className="admin-upload-button">
+                          {record.isEmptySlot ? "Upload Image" : "Replace"}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(event) =>
+                              record.isEmptySlot
+                                ? addHomepageImage(slot, event.target.files?.[0], index)
+                                : replaceImage(slot, record, event.target.files?.[0])
+                            }
+                          />
+                        </label>
+                        {record.isEmptySlot ? null : (
                           <button
                             className="admin-secondary"
                             type="button"
@@ -733,33 +791,39 @@ export default function AdminImageManager() {
                           >
                             Delete
                           </button>
-                          {(isInventory || isHomepage) && !record.isFallback ? (
-                            <>
-                              <button
-                                className="admin-secondary"
-                                type="button"
-                                onClick={() => moveImage(slot, realIndex, -1)}
-                                disabled={realIndex === 0}
-                              >
-                                Move Up
-                              </button>
-                              <button
-                                className="admin-secondary"
-                                type="button"
-                                onClick={() => moveImage(slot, realIndex, 1)}
-                                disabled={realIndex === realImages.length - 1}
-                              >
-                                Move Down
-                              </button>
-                            </>
-                          ) : null}
+                        )}
+                        {!record.isEmptySlot && !record.isFallback ? (
+                          <>
+                            <button
+                              className="admin-secondary"
+                              type="button"
+                              onClick={() => moveImage(slot, index, -1)}
+                              disabled={index === 0}
+                            >
+                              Move Up
+                            </button>
+                            <button
+                              className="admin-secondary"
+                              type="button"
+                              onClick={() => moveImage(slot, index, 1)}
+                              disabled={index === visibleImages.length - 1}
+                            >
+                              Move Down
+                            </button>
+                          </>
+                        ) : null}
                         </div>
                         <p className="admin-note">
-                          {record.isFallback ? "Original site image" : index === 0 ? "Primary image" : `Image ${index + 1}`}
+                          {record.isEmptySlot
+                            ? `Image ${index + 1}`
+                            : record.isFallback
+                              ? "Original site image"
+                              : index === 0
+                                ? "Primary image"
+                                : `Image ${index + 1}`}
                         </p>
                       </div>
-                    );
-                  })}
+                  ))}
                 </div>
               </article>
             );
