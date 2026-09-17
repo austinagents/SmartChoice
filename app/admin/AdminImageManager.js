@@ -1,8 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { adminImageConfig } from "../lib/adminImageConfig";
+import { buildContentMap, contentSlotId } from "../lib/contentValues";
 import { getSupabaseBrowserClient } from "../lib/supabaseBrowser";
 import { getPublicImageUrl, hasSupabaseConfig, siteImagesBucket } from "../lib/supabaseConfig";
 import { siteContentPages } from "../data";
@@ -36,7 +37,7 @@ function getSlotKey(slot) {
 }
 
 function getContentSlotKey(slot) {
-  return `${slot.page}:${slot.sectionKey}:${slot.contentKey}:${slot.itemId || ""}`;
+  return contentSlotId(slot);
 }
 
 function fallbackRecord(slot) {
@@ -214,12 +215,35 @@ export default function AdminImageManager() {
   const [contentRecords, setContentRecords] = useState({});
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [showSavedToast, setShowSavedToast] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const savedToastTimeoutRef = useRef(null);
 
   const clearStatus = useCallback(() => {
     setError("");
     setMessage("");
   }, []);
+
+  const showTemporarySavedToast = useCallback(() => {
+    if (savedToastTimeoutRef.current) {
+      clearTimeout(savedToastTimeoutRef.current);
+    }
+
+    setShowSavedToast(true);
+    savedToastTimeoutRef.current = setTimeout(() => {
+      setShowSavedToast(false);
+      savedToastTimeoutRef.current = null;
+    }, 2000);
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (savedToastTimeoutRef.current) {
+        clearTimeout(savedToastTimeoutRef.current);
+      }
+    },
+    []
+  );
 
   const loadImages = useCallback(async () => {
     clearStatus();
@@ -281,17 +305,16 @@ export default function AdminImageManager() {
       return;
     }
 
+    const contentMap = buildContentMap(allContentSlots, data || []);
     const nextRecords = {};
     for (const slot of allContentSlots) {
-      const match = (data || []).find(
-        (record) =>
-          record.page === slot.page &&
-          record.section_key === slot.sectionKey &&
-          record.content_key === slot.contentKey &&
-          (record.item_id || "") === (slot.itemId || "")
-      );
-
-      nextRecords[getContentSlotKey(slot)] = match || fallbackContentRecord(slot);
+      const key = getContentSlotKey(slot);
+      const fallback = fallbackContentRecord(slot);
+      nextRecords[key] = {
+        ...fallback,
+        value: contentMap[key],
+        isFallback: contentMap[key] === slot.value,
+      };
     }
 
     setContentRecords(nextRecords);
@@ -394,6 +417,7 @@ export default function AdminImageManager() {
         await operation();
         await reload();
         setMessage(successMessage);
+        showTemporarySavedToast();
       } catch (mutationError) {
         setError(mutationError.message || "Something went wrong.");
       }
@@ -860,6 +884,11 @@ export default function AdminImageManager() {
 
       {message ? <p className="admin-success">{message}</p> : null}
       {error ? <p className="admin-error">{error}</p> : null}
+      {showSavedToast ? (
+        <div className="admin-saved-toast" role="status" aria-live="polite">
+          Saved ✓
+        </div>
+      ) : null}
 
       <section className="admin-image-list" aria-busy={isPending}>
         {slots.map((slot) => {

@@ -1,4 +1,4 @@
-import Image from "next/image";
+import ImageCarousel from "../components/ImageCarousel";
 import SiteShell from "../components/SiteShell";
 import {
   inventoryContentSlots,
@@ -46,11 +46,9 @@ export default async function PreOwnedInventory() {
           {inventoryItems.map((item, index) => (
             <article className="inventory-card" key={item.id}>
               <div className="inventory-photo">
-                <Image
-                  unoptimized
-                  src={inventoryImages[item.id][0].src}
+                <ImageCarousel
+                  images={inventoryImages[item.id]}
                   alt={item.title}
-                  fill
                   priority={index < 2}
                   sizes="(max-width: 900px) 100vw, (max-width: 1280px) 50vw, 33vw"
                 />

@@ -33,8 +33,15 @@ export default function ImageCarousel({
     );
   }
 
-  function showSlide(nextIndex) {
-    setActiveIndex((nextIndex + slides.length) % slides.length);
+  function showSlideBy(offset) {
+    setActiveIndex((currentIndex) => {
+      const nextIndex = currentIndex + offset;
+      return (nextIndex + slides.length) % slides.length;
+    });
+  }
+
+  function showSlideAt(index) {
+    setActiveIndex(index);
   }
 
   function handleTouchEnd(event) {
@@ -49,7 +56,7 @@ export default function ImageCarousel({
       return;
     }
 
-    showSlide(activeIndex + (distance > 0 ? 1 : -1));
+    showSlideBy(distance > 0 ? 1 : -1);
   }
 
   return (
@@ -58,45 +65,47 @@ export default function ImageCarousel({
       onTouchStart={(event) => setTouchStart(event.touches[0].clientX)}
       onTouchEnd={handleTouchEnd}
     >
-      {slides.map((image, index) => (
-        <Image
-          key={image.id || image.storagePath || image.src}
-          unoptimized
-          src={image.src}
-          alt={alt || image.alt || ""}
-          fill
-          priority={priority && index === 0}
-          sizes={sizes}
-          className={index === activeIndex ? "active" : ""}
-          aria-hidden={index === activeIndex ? undefined : true}
-        />
-      ))}
-      <button
-        className="carousel-button previous"
-        type="button"
-        aria-label="Show previous image"
-        onClick={() => showSlide(activeIndex - 1)}
-      >
-        Prev
-      </button>
-      <button
-        className="carousel-button next"
-        type="button"
-        aria-label="Show next image"
-        onClick={() => showSlide(activeIndex + 1)}
-      >
-        Next
-      </button>
-      <div className="carousel-dots" aria-label="Image carousel position">
+      <div className="image-carousel-frame">
         {slides.map((image, index) => (
-          <button
+          <Image
             key={image.id || image.storagePath || image.src}
-            type="button"
-            aria-label={`Show image ${index + 1}`}
-            aria-current={index === activeIndex ? "true" : undefined}
-            onClick={() => showSlide(index)}
+            unoptimized
+            src={image.src}
+            alt={alt || image.alt || ""}
+            fill
+            priority={priority && index === 0}
+            sizes={sizes}
+            className={index === activeIndex ? "active" : ""}
+            aria-hidden={index === activeIndex ? undefined : true}
           />
         ))}
+        <button
+          className="carousel-button previous"
+          type="button"
+          aria-label="Show previous image"
+          onClick={() => showSlideBy(-1)}
+        >
+          <span className="carousel-chevron" aria-hidden="true" />
+        </button>
+        <button
+          className="carousel-button next"
+          type="button"
+          aria-label="Show next image"
+          onClick={() => showSlideBy(1)}
+        >
+          <span className="carousel-chevron" aria-hidden="true" />
+        </button>
+        <div className="carousel-dots" aria-label="Image carousel position">
+          {slides.map((image, index) => (
+            <button
+              key={image.id || image.storagePath || image.src}
+              type="button"
+              aria-label={`Show image ${index + 1}`}
+              aria-current={index === activeIndex ? "true" : undefined}
+              onClick={() => showSlideAt(index)}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );

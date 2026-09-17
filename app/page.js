@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import ImageCarousel from "./components/ImageCarousel";
 import SiteShell from "./components/SiteShell";
@@ -125,11 +124,9 @@ export default async function Home() {
             {featuredInventory.map((cart, index) => (
               <article className="featured-cart" key={cart.id}>
                 <div className="featured-cart-image">
-                  <Image
-                    unoptimized
-                    src={inventoryImages[cart.id][0].src}
+                  <ImageCarousel
+                    images={inventoryImages[cart.id]}
                     alt={cart.title}
-                    fill
                     priority={index === 0}
                     sizes="(max-width: 720px) 100vw, (max-width: 1280px) 50vw, 25vw"
                   />
