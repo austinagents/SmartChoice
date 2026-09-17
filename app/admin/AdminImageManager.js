@@ -16,6 +16,7 @@ const allAdminSlots = [...adminImageConfig.homepage, ...adminImageConfig.invento
 const allContentSlots = siteContentPages.flatMap((page) => page.slots);
 const localAdminBypass = true;
 const maxHomepageImages = 7;
+const maxInventoryImages = 7;
 
 function makeStoragePath(slot, file) {
   const extension = file.name.includes(".") ? file.name.split(".").pop() : "jpg";
@@ -88,6 +89,21 @@ function emptyHomepageRecord(slot, index) {
   };
 }
 
+function emptyInventoryRecord(slot, index) {
+  return {
+    id: null,
+    page: slot.page,
+    section_key: slot.sectionKey,
+    slot_key: slot.slotKey,
+    item_id: slot.itemId || null,
+    storage_path: null,
+    alt_text: slot.alt || slot.label,
+    sort_order: index,
+    src: null,
+    isEmptySlot: true,
+  };
+}
+
 function homepageDisplayImages(slot, images) {
   const displayImages = Array.from({ length: maxHomepageImages }, (_item, index) =>
     index === 0 ? fallbackRecord(slot) : emptyHomepageRecord(slot, index)
@@ -106,6 +122,86 @@ function homepageDisplayImages(slot, images) {
   return displayImages;
 }
 
+function inventoryDisplayImages(slot, images) {
+  const displayImages = Array.from({ length: maxInventoryImages }, (_item, index) =>
+    index === 0 ? fallbackRecord(slot) : emptyInventoryRecord(slot, index)
+  );
+
+  for (const record of images.filter((item) => !item.isFallback)) {
+    const sortOrder = Number.isInteger(Number(record.sort_order))
+      ? Number(record.sort_order)
+      : 0;
+
+    if (sortOrder >= 0 && sortOrder < maxInventoryImages) {
+      displayImages[sortOrder] = record;
+    }
+  }
+
+  return displayImages;
+}
+
+function maxImagesForSlot(slot) {
+  return slot.page === "pre-owned-inventory" ? maxInventoryImages : maxHomepageImages;
+}
+
+function contentSlotsForSection(page, sectionKey, itemId) {
+  return allContentSlots.filter(
+    (slot) =>
+      slot.page === page &&
+      slot.sectionKey === sectionKey &&
+      (itemId === undefined || (slot.itemId || "") === itemId)
+  );
+}
+
+function contentSlotsForHomepageImageSlot(slot) {
+  if (slot.slotKey === "hero_image") {
+    return contentSlotsForSection("homepage", "hero");
+  }
+
+  if (slot.slotKey === "built_to_order_feature") {
+    return contentSlotsForSection("homepage", "built_feature");
+  }
+
+  if (slot.slotKey === "mobile_service_feature") {
+    return contentSlotsForSection("homepage", "service_feature");
+  }
+
+  if (slot.slotKey === "consignment_feature") {
+    return contentSlotsForSection("homepage", "consignment");
+  }
+
+  const whatWeDoKeysBySlot = {
+    pre_owned_carts: ["pre_owned_title", "pre_owned_text"],
+    built_to_order_carts: ["built_title", "built_text"],
+    service_repairs: ["service_title", "service_text"],
+    consign_sales: ["consign_title", "consign_text"],
+  };
+  const contentKeys = whatWeDoKeysBySlot[slot.slotKey];
+
+  if (!contentKeys) {
+    return [];
+  }
+
+  return allContentSlots.filter(
+    (contentSlot) =>
+      contentSlot.page === "homepage" &&
+      contentSlot.sectionKey === "what_we_do" &&
+      contentKeys.includes(contentSlot.contentKey)
+  );
+}
+
+function contentSlotsForImageSlot(slot) {
+  if (slot.page === "homepage") {
+    return contentSlotsForHomepageImageSlot(slot);
+  }
+
+  if (slot.page === "pre-owned-inventory") {
+    return contentSlotsForSection("pre-owned-inventory", "inventory", slot.itemId || "");
+  }
+
+  return [];
+}
+
 export default function AdminImageManager() {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const hasConfig = hasSupabaseConfig();
@@ -113,9 +209,7 @@ export default function AdminImageManager() {
   const [authChecked, setAuthChecked] = useState(!hasConfig);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [activeSection, setActiveSection] = useState("images");
   const [activeImageTab, setActiveImageTab] = useState("homepage");
-  const [activeContentPage, setActiveContentPage] = useState(siteContentPages[0].key);
   const [records, setRecords] = useState({});
   const [contentRecords, setContentRecords] = useState({});
   const [message, setMessage] = useState("");
@@ -397,15 +491,43 @@ export default function AdminImageManager() {
     });
   }
 
-  async function addInventoryImage(slot, file) {
+  async function addInventoryImage(slot, file, sortOrder) {
     if (!file) {
       return;
     }
 
     runMutation(async () => {
-      const current = records[getSlotKey(slot)] || [];
-      const existing = current.filter((item) => !item.isFallback);
+      const existing = await loadSlotImageRecords(slot);
+
+      if (existing.length >= maxInventoryImages) {
+        throw new Error("Inventory listings can have up to 7 images.");
+      }
+
+      const targetSortOrder = Number.isInteger(sortOrder) ? sortOrder : existing.length;
+      const targetExists = existing.some(
+        (record) => Number(record.sort_order) === targetSortOrder
+      );
+
+      if (targetExists) {
+        throw new Error("That inventory image slot is already occupied. Replace the image instead.");
+      }
+
       const storagePath = await uploadFile(slot, file);
+      const latestExisting = await loadSlotImageRecords(slot);
+
+      if (latestExisting.length >= maxInventoryImages) {
+        await supabase.storage.from(siteImagesBucket).remove([storagePath]);
+        throw new Error("Inventory listings can have up to 7 images.");
+      }
+
+      const latestTargetExists = latestExisting.some(
+        (record) => Number(record.sort_order) === targetSortOrder
+      );
+
+      if (latestTargetExists) {
+        await supabase.storage.from(siteImagesBucket).remove([storagePath]);
+        throw new Error("That inventory image slot is already occupied. Replace the image instead.");
+      }
 
       const { error: insertError } = await supabase.from("site_images").insert({
         page: slot.page,
@@ -414,7 +536,7 @@ export default function AdminImageManager() {
         item_id: slot.itemId,
         storage_path: storagePath,
         alt_text: slot.alt || slot.label,
-        sort_order: existing.length,
+        sort_order: targetSortOrder,
       });
 
       if (insertError) {
@@ -502,8 +624,8 @@ export default function AdminImageManager() {
     const images = (records[key] || []).filter((item) => !item.isFallback);
     const nextIndex = index + direction;
 
-    if (slot.page === "homepage") {
-      if (nextIndex < 0 || nextIndex >= maxHomepageImages) {
+    if (slot.page === "homepage" || slot.page === "pre-owned-inventory") {
+      if (nextIndex < 0 || nextIndex >= maxImagesForSlot(slot)) {
         return;
       }
 
@@ -567,21 +689,29 @@ export default function AdminImageManager() {
     }));
   }
 
-  async function saveContent(slot) {
-    const key = getContentSlotKey(slot);
-    const record = contentRecords[key] || fallbackContentRecord(slot);
+  async function saveContentSlots(slotsToSave) {
+    if (!slotsToSave.length) {
+      return;
+    }
 
     runMutation(
       async () => {
-        const { error: upsertError } = await supabase.from("site_content").upsert(
-          {
+        const rows = slotsToSave.map((slot) => {
+          const key = getContentSlotKey(slot);
+          const record = contentRecords[key] || fallbackContentRecord(slot);
+
+          return {
             page: slot.page,
             section_key: slot.sectionKey,
             content_key: slot.contentKey,
             item_id: slot.itemId || "",
             value: record.value,
             updated_at: new Date().toISOString(),
-          },
+          };
+        });
+
+        const { error: upsertError } = await supabase.from("site_content").upsert(
+          rows,
           {
             onConflict: "page,section_key,content_key,item_id",
           }
@@ -656,9 +786,52 @@ export default function AdminImageManager() {
   }
 
   const slots = adminImageConfig[activeImageTab];
-  const activeContentConfig = siteContentPages.find(
-    (page) => page.key === activeContentPage
-  );
+
+  const renderContentFields = (contentSlots) => {
+    if (!contentSlots.length) {
+      return null;
+    }
+
+    return (
+      <div className="admin-content-grid">
+        {contentSlots.map((slot) => {
+          const key = getContentSlotKey(slot);
+          const record = contentRecords[key] || fallbackContentRecord(slot);
+          const fieldId = `content-${key.replace(/[^a-z0-9_-]/gi, "-")}`;
+
+          return (
+            <div className="admin-content-field" key={key}>
+              <label htmlFor={fieldId}>{slot.label}</label>
+              {slot.inputType === "long" ? (
+                <textarea
+                  id={fieldId}
+                  value={record.value}
+                  onChange={(event) => updateContentDraft(slot, event.target.value)}
+                  rows={4}
+                />
+              ) : (
+                <input
+                  id={fieldId}
+                  type="text"
+                  value={record.value}
+                  onChange={(event) => updateContentDraft(slot, event.target.value)}
+                />
+              )}
+            </div>
+          );
+        })}
+        <div className="admin-content-actions">
+          <button
+            className="admin-primary"
+            type="button"
+            onClick={() => saveContentSlots(contentSlots)}
+          >
+            Save Text
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <main className="admin-page">
@@ -672,212 +845,128 @@ export default function AdminImageManager() {
         </button>
       </header>
 
-      <nav className="admin-tabs" aria-label="Admin tools">
-        {[
-          ["images", "Images"],
-          ["content", "Text / Content"],
-        ].map(([section, label]) => (
+      <nav className="admin-tabs" aria-label="Admin sections">
+        {Object.keys(imagePageLabels).map((tab) => (
           <button
-            key={section}
-            className={activeSection === section ? "active" : ""}
+            key={tab}
+            className={activeImageTab === tab ? "active" : ""}
             type="button"
-            onClick={() => setActiveSection(section)}
+            onClick={() => setActiveImageTab(tab)}
           >
-            {label}
+            {imagePageLabels[tab]}
           </button>
         ))}
       </nav>
 
-      {activeSection === "images" ? (
-        <nav className="admin-tabs admin-subtabs" aria-label="Image sections">
-          {Object.keys(imagePageLabels).map((tab) => (
-            <button
-              key={tab}
-              className={activeImageTab === tab ? "active" : ""}
-              type="button"
-              onClick={() => setActiveImageTab(tab)}
-            >
-              {imagePageLabels[tab]}
-            </button>
-          ))}
-        </nav>
-      ) : (
-        <nav className="admin-tabs admin-subtabs" aria-label="Content pages">
-          {siteContentPages.map((page) => (
-            <button
-              key={page.key}
-              className={activeContentPage === page.key ? "active" : ""}
-              type="button"
-              onClick={() => setActiveContentPage(page.key)}
-            >
-              {page.label}
-            </button>
-          ))}
-        </nav>
-      )}
-
       {message ? <p className="admin-success">{message}</p> : null}
       {error ? <p className="admin-error">{error}</p> : null}
 
-      {activeSection === "images" ? (
-        <section className="admin-image-list" aria-busy={isPending}>
-          {slots.map((slot) => {
-            const key = getSlotKey(slot);
-            const images = records[key] || [fallbackRecord(slot)];
-            const isInventory = slot.page === "pre-owned-inventory";
-            const visibleImages = isInventory ? images : homepageDisplayImages(slot, images);
+      <section className="admin-image-list" aria-busy={isPending}>
+        {slots.map((slot) => {
+          const key = getSlotKey(slot);
+          const images = records[key] || [fallbackRecord(slot)];
+          const isInventory = slot.page === "pre-owned-inventory";
+          const visibleImages = isInventory
+            ? inventoryDisplayImages(slot, images)
+            : homepageDisplayImages(slot, images);
+          const contentSlots = contentSlotsForImageSlot(slot);
 
-            return (
-              <article
-                className={`admin-image-group${isInventory ? "" : " admin-homepage-image-group"}`}
-                key={key}
-              >
-                <div className="admin-group-heading">
-                  <div>
-                    <p>{isInventory ? "Inventory Listing" : "Homepage Section"}</p>
-                    <h2>{slot.label}</h2>
-                  </div>
-                  {isInventory ? (
-                    <label className="admin-upload-button">
-                      Add Image
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(event) => addInventoryImage(slot, event.target.files?.[0])}
-                      />
-                    </label>
-                  ) : null}
+          return (
+            <article
+              className={`admin-image-group${isInventory ? "" : " admin-homepage-image-group"}`}
+              key={key}
+            >
+              <div className="admin-group-heading">
+                <div>
+                  <p>{isInventory ? "Inventory Listing" : "Homepage Section"}</p>
+                  <h2>{slot.label}</h2>
                 </div>
+              </div>
 
-                <div className="admin-images-grid">
-                  {visibleImages.map((record, index) => (
-                    <div
-                      className={`admin-image-card${record.isEmptySlot ? " admin-empty-image-card" : ""}`}
-                      key={record.id || `${key}-slot-${index}`}
-                    >
-                      {record.isEmptySlot ? (
-                        <div className="admin-empty-preview">
-                          <span>Image {index + 1}</span>
-                        </div>
-                      ) : (
-                        <div className="admin-preview">
-                          <Image
-                            unoptimized
-                            src={record.src}
-                            alt={record.alt_text || slot.label}
-                            fill
-                            sizes="(max-width: 900px) 100vw, 360px"
-                          />
-                        </div>
-                      )}
-                      <div className="admin-image-actions">
-                        <label className="admin-upload-button">
-                          {record.isEmptySlot ? "Upload Image" : "Replace"}
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(event) =>
-                              record.isEmptySlot
+              <div className="admin-images-grid">
+                {visibleImages.map((record, index) => (
+                  <div
+                    className={`admin-image-card${record.isEmptySlot ? " admin-empty-image-card" : ""}`}
+                    key={record.id || `${key}-slot-${index}`}
+                  >
+                    {record.isEmptySlot ? (
+                      <div className="admin-empty-preview">
+                        <span>Image {index + 1}</span>
+                      </div>
+                    ) : (
+                      <div className="admin-preview">
+                        <Image
+                          unoptimized
+                          src={record.src}
+                          alt={record.alt_text || slot.label}
+                          fill
+                          sizes="(max-width: 900px) 100vw, 360px"
+                        />
+                      </div>
+                    )}
+                    <div className="admin-image-actions">
+                      <label className="admin-upload-button">
+                        {record.isEmptySlot ? "Upload Image" : "Replace"}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(event) =>
+                            record.isEmptySlot && isInventory
+                              ? addInventoryImage(slot, event.target.files?.[0], index)
+                              : record.isEmptySlot
                                 ? addHomepageImage(slot, event.target.files?.[0], index)
                                 : replaceImage(slot, record, event.target.files?.[0])
-                            }
-                          />
-                        </label>
-                        {record.isEmptySlot ? null : (
+                          }
+                        />
+                      </label>
+                      {record.isEmptySlot ? null : (
+                        <button
+                          className="admin-secondary"
+                          type="button"
+                          onClick={() => deleteImage(record)}
+                        >
+                          Delete
+                        </button>
+                      )}
+                      {!record.isEmptySlot && !record.isFallback ? (
+                        <>
                           <button
                             className="admin-secondary"
                             type="button"
-                            onClick={() => deleteImage(record)}
+                            onClick={() => moveImage(slot, index, -1)}
+                            disabled={index === 0}
                           >
-                            Delete
+                            Move Up
                           </button>
-                        )}
-                        {!record.isEmptySlot && !record.isFallback ? (
-                          <>
-                            <button
-                              className="admin-secondary"
-                              type="button"
-                              onClick={() => moveImage(slot, index, -1)}
-                              disabled={index === 0}
-                            >
-                              Move Up
-                            </button>
-                            <button
-                              className="admin-secondary"
-                              type="button"
-                              onClick={() => moveImage(slot, index, 1)}
-                              disabled={index === visibleImages.length - 1}
-                            >
-                              Move Down
-                            </button>
-                          </>
-                        ) : null}
-                        </div>
-                        <p className="admin-note">
-                          {record.isEmptySlot
-                            ? `Image ${index + 1}`
-                            : record.isFallback
-                              ? "Original site image"
-                              : index === 0
-                                ? "Primary image"
-                                : `Image ${index + 1}`}
-                        </p>
-                      </div>
-                  ))}
-                </div>
-              </article>
-            );
-          })}
-        </section>
-      ) : (
-        <section className="admin-content-list" aria-busy={isPending}>
-          {activeContentConfig.slots.map((slot) => {
-            const key = getContentSlotKey(slot);
-            const record = contentRecords[key] || fallbackContentRecord(slot);
-            const sectionLabel = slot.sectionKey
-              .split("_")
-              .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-              .join(" ");
-            const fieldId = `content-${key.replace(/[^a-z0-9_-]/gi, "-")}`;
+                          <button
+                            className="admin-secondary"
+                            type="button"
+                            onClick={() => moveImage(slot, index, 1)}
+                            disabled={index === visibleImages.length - 1}
+                          >
+                            Move Down
+                          </button>
+                        </>
+                      ) : null}
+                    </div>
+                    <p className="admin-note">
+                      {record.isEmptySlot
+                        ? `Image ${index + 1}`
+                        : record.isFallback
+                          ? "Original site image"
+                          : index === 0
+                            ? "Primary image"
+                            : `Image ${index + 1}`}
+                    </p>
+                  </div>
+                ))}
+              </div>
 
-            return (
-              <article className="admin-content-field" key={key}>
-                <label htmlFor={fieldId}>
-                  <span>{sectionLabel}</span>
-                  {slot.label}
-                </label>
-                {slot.inputType === "long" ? (
-                  <textarea
-                    id={fieldId}
-                    value={record.value}
-                    onChange={(event) => updateContentDraft(slot, event.target.value)}
-                    rows={4}
-                  />
-                ) : (
-                  <input
-                    id={fieldId}
-                    type="text"
-                    value={record.value}
-                    onChange={(event) => updateContentDraft(slot, event.target.value)}
-                  />
-                )}
-                <div className="admin-content-actions">
-                  <p className="admin-note">
-                    {record.isFallback ? "Default site text" : "Supabase override"}
-                  </p>
-                  <button
-                    className="admin-primary"
-                    type="button"
-                    onClick={() => saveContent(slot)}
-                  >
-                    Save
-                  </button>
-                </div>
-              </article>
-            );
-          })}
-        </section>
-      )}
+              {renderContentFields(contentSlots)}
+            </article>
+          );
+        })}
+      </section>
     </main>
   );
 }
